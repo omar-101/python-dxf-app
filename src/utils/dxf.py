@@ -1,59 +1,113 @@
 import ezdxf
 import matplotlib.pyplot as plt
 from collections import defaultdict
-from utils import unique as unique_str
+from utils import unique
 
-class Dxf:
-    def __init__(self, file_path):
-        self.file_path = file_path
-    def extract(self):
-        # Load DXF
-        doc = ezdxf.readfile(self.file_path)
+class Dxf: 
+    def extract_entities(self, dxf_path):
+        doc = ezdxf.readfile(dxf_path)
         msp = doc.modelspace()
-        coordinates = []
+        extracted = []
+
         for entity in msp:
-            entity_type = entity.dxftype()
+            e = {"entity_type": entity.dxftype(), "color": entity.dxf.color, "layer": entity.dxf.layer}
 
-            if entity_type == 'LINE':
-                start = entity.dxf.start
-                end = entity.dxf.end
-            for pt in [start, end]:
-                x, y, z = pt
-                coordinates.append({"entity_type": entity_type, "x":x, "y":y, "z":z})
-        return coordinates
+            if entity.dxftype() == "POINT":
+                e.update({
+                    "x": entity.dxf.location.x,
+                    "y": entity.dxf.location.y,
+                    "z": entity.dxf.location.z
+                })
 
+            elif entity.dxftype() == "LINE":
+                e.update({
+                    "start": {
+                        "x": entity.dxf.start.x,
+                        "y": entity.dxf.start.y,
+                        "z": entity.dxf.start.z
+                    },
+                    "end": {
+                        "x": entity.dxf.end.x,
+                        "y": entity.dxf.end.y,
+                        "z": entity.dxf.end.z
+                    }
+                })
+                
 
-        
-        
+            elif entity.dxftype() == "LWPOLYLINE":
+                e.update({
+                    "closed": entity.closed,
+                    "vertices": [
+                        {"x": v[0], "y": v[1], "z": 0.0} for v in entity.get_points()
+                    ]
+                })
 
-    def draw(self, coordinates):
-        file_path = "./tmp/" + unique_str.unique_string(20) + ".png"
+            elif entity.dxftype() == "TEXT":
+                e.update({
+                    "text": entity.dxf.text,
+                    "position": {
+                        "x": entity.dxf.insert.x,
+                        "y": entity.dxf.insert.y,
+                        "z": entity.dxf.insert.z
+                    },
+                    "height": entity.dxf.height,
+                    "rotation": entity.dxf.rotation
+                })
 
-        entities = defaultdict(list)
-        for coordinate in coordinates:
-            entities[coordinate.entity_type].append((coordinate.x, coordinate.y))
-            
-        # Setup plot
-        plt.figure(figsize=(10, 10))
-        ax = plt.gca()
+            # Optional: Add support for CIRCLE, ARC, MTEXT, etc.
+
+            extracted.append(e)
+
+        return extracted
+    
+    
+    def draw_entities(self, entities: list[dict]):
+        file_path = "./tmp/" + unique.unique_string(20) + ".png"
+        # Group entities by their type
+        grouped = defaultdict(list)
+        for ent in entities:
+            ent_type = ent.get("entity_type")
+            if ent_type:
+                grouped[ent_type].append(ent)
+
+        fig, ax = plt.subplots()
         ax.set_aspect('equal')
-        plt.title("Entities from DXF")
-        plt.grid(True)
-        
-        for etype, coords in entities.items():
-                    # Draw every two points as a line segment
-            for i in range(0, len(coords), 2):
-                if i + 1 < len(coords):
-                    x1, y1 = coords[i]
-                    x2, y2 = coords[i + 1]
-                    plt.plot([x1, x2], [y1, y2], 'b-', label='LINE' if i == 0 else "")
-                    
-                    
-        handles, labels = plt.gca().get_legend_handles_labels()
-        unique = dict(zip(labels, handles))
-        plt.legend(unique.values(), unique.keys())
-        
-        # Save to file
+        ax.grid(True)
+
+        # Draw POINT entities as blue circles
+        for pt in grouped.get("POINT", []):
+            ax.scatter(pt['x'], pt['y'], color='blue', s=30, label='Point')
+
+        # Draw TEXT entities as labels
+        for txt in grouped.get("TEXT", []):
+            pos = txt.get("position") or txt
+            ax.text(pos['x'], pos['y'], txt['text'], color='purple')
+
+        # Draw LINE entities as green segments
+        for idx, ln in enumerate(grouped.get("LINE", [])):
+            start = ln["start"]
+            end = ln["end"]
+            ax.plot([start['x'], end['x']], [start['y'], end['y']], color='green', label='Line' if idx == 0 else "")
+
+        # Draw LWPOLYLINE entities
+        poly_label_drawn = False
+        for poly in grouped.get("LWPOLYLINE", []):
+            pts = poly["vertices"]
+            xs = [pt['x'] for pt in pts]
+            ys = [pt['y'] for pt in pts]
+            if poly.get("closed"):
+                xs.append(xs[0])
+                ys.append(ys[0])
+            label = 'Frame' if poly.get("layer") == "Frames" else ('Polyline' if not poly_label_drawn else "")
+            color = 'orange' if poly.get("layer") == "Frames" else 'red'
+            ax.plot(xs, ys, color=color, label=label)
+            if label == 'Polyline':
+                poly_label_drawn = True
+
+        ax.legend(loc='best')
+        plt.title("Drawing Entities Visualization")
+        plt.xlabel("X axis")
+        plt.ylabel("Y axis")
         plt.savefig(file_path)
-        plt.show()
+        plt.close()
         return file_path

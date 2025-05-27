@@ -2,7 +2,12 @@ import ezdxf
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from utils import unique
+from ezdxf.colors import int2rgb  # New API
 
+def get_color_from_aci(aci: int):
+    rgb = int2rgb(aci)
+    return [c / 255 for c in rgb]  # Normalize for matplotlib
+    
 class Dxf: 
     def extract_entities(self, dxf_path):
         doc = ezdxf.readfile(dxf_path)
@@ -76,18 +81,19 @@ class Dxf:
 
         # Draw POINT entities as blue circles
         for pt in grouped.get("POINT", []):
-            ax.scatter(pt['x'], pt['y'], color='blue', s=30, label='Point')
+            ax.scatter(pt['x'], pt['y'], color=get_color_from_aci(pt["color"]), s=30, label='Point')
 
         # Draw TEXT entities as labels
         for txt in grouped.get("TEXT", []):
             pos = txt.get("position") or txt
-            ax.text(pos['x'], pos['y'], txt['text'], color='purple')
+            ax.text(pos['x'], pos['y'], txt['text'], color=get_color_from_aci(txt["color"]))
 
         # Draw LINE entities as green segments
         for idx, ln in enumerate(grouped.get("LINE", [])):
+            print(ln["color"])
             start = ln["start"]
             end = ln["end"]
-            ax.plot([start['x'], end['x']], [start['y'], end['y']], color='green', label='Line' if idx == 0 else "")
+            ax.plot([start['x'], end['x']], [start['y'], end['y']], color=get_color_from_aci(ln["color"]), label='Line' if idx == 0 else "")
 
         # Draw LWPOLYLINE entities
         poly_label_drawn = False
@@ -99,8 +105,7 @@ class Dxf:
                 xs.append(xs[0])
                 ys.append(ys[0])
             label = 'Frame' if poly.get("layer") == "Frames" else ('Polyline' if not poly_label_drawn else "")
-            color = 'orange' if poly.get("layer") == "Frames" else 'red'
-            ax.plot(xs, ys, color=color, label=label)
+            ax.plot(xs, ys, color=get_color_from_aci(poly["color"]), label=label)
             if label == 'Polyline':
                 poly_label_drawn = True
 

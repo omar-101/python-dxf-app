@@ -16,6 +16,7 @@ class Coordinate(BaseModel):
     entity_type: str | None = None
     layer: str | None = None
     color: int | None = None
+    aci: int | None = None
     x: float | None = None
     y: float | None = None
     z: float | None = None

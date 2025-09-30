@@ -72,7 +72,7 @@ class Dxf:
 
         return extracted
 
-    def draw_entities(self, entities: list[dict], width=20, height=16, dpi=600, file_path=None):
+    def draw_entities(self, entities: list[dict], width=20, height=16, dpi=200, file_path=None):
         """Draw entities with matplotlib and save as a PNG image."""
         if not file_path:
             file_path = "./tmp/" + unique.unique_string(20) + ".png"

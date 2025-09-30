@@ -36,7 +36,7 @@ class Coordinate(BaseModel):
 
 class Coordinates(BaseModel):
     coordinates: list[Coordinate]
-    shifts: list[list[float]] | None = None
+    shifts: list[list[int]] | None = None
 
 @router.post("/parse")
 async def read_dxf_file(file: UploadFile):
@@ -57,7 +57,7 @@ async def read_dxf_file(body: Coordinates):
 @router.post("/shift")
 async def read_dxf_file(body: Coordinates):
     dicts = [item.model_dump() for item in body.coordinates]
-    shifts = [item.model_dump() for item in body.shifts]
+    # shifts = [item.model_dump() for item in body.shifts]
     dxf_util = dxf.Dxf()
-    new_coordinates = dxf_util.shift_measurements(dicts, shifts)
+    new_coordinates = dxf_util.shift_measurements(dicts, body.shifts)
     return {"coordinates": new_coordinates}

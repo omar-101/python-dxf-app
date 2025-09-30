@@ -7,6 +7,11 @@ from fastapi.responses import FileResponse
 
 router = APIRouter()
 
+class Triple(BaseModel):
+    code: int
+    offset: int
+    category: int
+
 class Position(BaseModel):
     x: float
     y: float
@@ -31,6 +36,7 @@ class Coordinate(BaseModel):
 
 class Coordinates(BaseModel):
     coordinates: list[Coordinate]
+    shifts: list[list[float]] | None = None
 
 @router.post("/parse")
 async def read_dxf_file(file: UploadFile):
@@ -47,3 +53,11 @@ async def read_dxf_file(body: Coordinates):
     dxf_util = dxf.Dxf()
     file_path = dxf_util.draw_entities(dicts)
     return FileResponse(file_path)
+
+@router.post("/shift")
+async def read_dxf_file(body: Coordinates):
+    dicts = [item.model_dump() for item in body.coordinates]
+    shifts = [item.model_dump() for item in body.shifts]
+    dxf_util = dxf.Dxf()
+    new_coordinates = dxf_util.shift_measurements(dicts, shifts)
+    return {"coordinates": new_coordinates}

@@ -2,7 +2,7 @@ import ezdxf
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from utils import unique
-
+from utils import shift_measurements
 
 def aci_to_rgb(aci_color):
     """Convert AutoCAD Color Index (ACI) to RGB tuple normalized for matplotlib."""
@@ -127,3 +127,7 @@ class Dxf:
         plt.savefig(file_path, dpi=dpi, bbox_inches='tight')
         plt.close()
         return file_path
+    
+    def shift_measurements(self, entities: list[dict], shifts):
+        return shift_measurements.smartscale_main(entities, shifts)
+            

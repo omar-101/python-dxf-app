@@ -3,6 +3,9 @@ from utils import unique
 from utils import dxf
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
+from utils.dxf_v1 import extract
+from utils.dxf_v1 import draw
+from utils.dxf_v1 import generate
 
 
 router = APIRouter()
@@ -38,26 +41,29 @@ class Coordinates(BaseModel):
     coordinates: list[Coordinate]
     shifts: list[list[int]] | None = None
 
-@router.post("/parse")
+@router.post("/extract")
 async def read_dxf_file(file: UploadFile):
     file_path = "./tmp/" + unique.unique_string(20) + ".dxf"
     with open(file_path, "wb") as F:
         F.write(await file.read())
-    dxf_util = dxf.Dxf()
-    coordinates = dxf_util.extract_entities(file_path)
+    coordinates = extract.extract_entities(file_path)
     return {"coordinates": coordinates}
 
 @router.post("/draw")
 async def read_dxf_file(body: Coordinates):
     dicts = [item.model_dump() for item in body.coordinates]
-    dxf_util = dxf.Dxf()
-    file_path = dxf_util.draw_entities(dicts)
+    file_path = draw.draw_entities(dicts)
+    return FileResponse(file_path)
+
+@router.post("/generate")
+async def read_dxf_file(body: Coordinates):
+    dicts = [item.model_dump() for item in body.coordinates]
+    file_path = generate.generate_dxf(dicts)
     return FileResponse(file_path)
 
 @router.post("/shift")
 async def read_dxf_file(body: Coordinates):
     dicts = [item.model_dump() for item in body.coordinates]
-    # shifts = [item.model_dump() for item in body.shifts]
     dxf_util = dxf.Dxf()
     new_coordinates = dxf_util.shift_measurements(dicts, body.shifts)
     return {"coordinates": new_coordinates}

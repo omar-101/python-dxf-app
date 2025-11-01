@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from utils.dxf_v1 import extract
 from utils.dxf_v1 import draw
 from utils.dxf_v1 import generate
+from typing import Optional
 
 
 router = APIRouter()
@@ -39,6 +40,7 @@ class Coordinate(BaseModel):
 
 class Coordinates(BaseModel):
     coordinates: list[Coordinate]
+    coordinates2: Optional[list[Coordinate]] = None
     shifts: list[list[int]] | None = None
 
 @router.post("/extract")
@@ -52,7 +54,8 @@ async def read_dxf_file(file: UploadFile):
 @router.post("/draw")
 async def read_dxf_file(body: Coordinates):
     dicts = [item.model_dump() for item in body.coordinates]
-    file_path = draw.draw_entities(dicts)
+    dicts2 = [item.model_dump() for item in body.coordinates2] if body.coordinates2 else None
+    file_path = draw.draw_entities(dicts, entities2=dicts2 if dicts2 else None)
     return FileResponse(file_path)
 
 @router.post("/generate")

@@ -1,25 +1,27 @@
-from fastapi import APIRouter, UploadFile
-from utils import unique
-from utils import dxf
-from pydantic import BaseModel
+from fastapi import APIRouter, UploadFile, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
-from utils.dxf_v1 import extract
-from utils.dxf_v1 import draw
-from utils.dxf_v1 import generate
+from pydantic import BaseModel
 from typing import Optional
+import os
+
+from utils import unique, dxf
+from utils.dxf_v1 import extract, draw, generate
 
 
 router = APIRouter()
+
 
 class Triple(BaseModel):
     code: int
     offset: int
     category: int
 
+
 class Position(BaseModel):
     x: float
     y: float
     z: float
+
 
 class Coordinate(BaseModel):
     entity_type: str | None = None
@@ -38,34 +40,81 @@ class Coordinate(BaseModel):
     start: Position | None = None
     end: Position | None = None
 
+
 class Coordinates(BaseModel):
     coordinates: list[Coordinate]
     coordinates2: Optional[list[Coordinate]] = None
     shifts: list[list[int]] | None = None
 
+
+# -------------------------------
+# Helper to delete files in background
+# -------------------------------
+def remove_file(path: str):
+    if os.path.exists(path):
+        os.remove(path)
+
+
+# -------------------------------
+# /extract endpoint
+# -------------------------------
 @router.post("/extract")
 async def read_dxf_file(file: UploadFile):
-    file_path = "./tmp/" + unique.unique_string(20) + ".dxf"
-    with open(file_path, "wb") as F:
-        F.write(await file.read())
-    coordinates = extract.extract_entities(file_path)
-    return {"coordinates": coordinates}
+    os.makedirs("./tmp", exist_ok=True)
+    file_path = f"./tmp/{unique.unique_string(20)}.dxf"
 
+    try:
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+
+        coordinates = extract.extract_entities(file_path)
+        return {"success": True, "coordinates": coordinates}
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+
+# -------------------------------
+# /draw endpoint
+# -------------------------------
 @router.post("/draw")
-async def read_dxf_file(body: Coordinates):
+async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
+    os.makedirs("./tmp", exist_ok=True)
     dicts = [item.model_dump() for item in body.coordinates]
     dicts2 = [item.model_dump() for item in body.coordinates2] if body.coordinates2 else None
     file_path = draw.draw_entities(dicts, entities2=dicts2 if dicts2 else None)
+
+    # Schedule file deletion after response
+    background_tasks.add_task(remove_file, file_path)
     return FileResponse(file_path)
 
+
+# -------------------------------
+# /generate endpoint
+# -------------------------------
 @router.post("/generate")
-async def read_dxf_file(body: Coordinates):
+async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
+    os.makedirs("./tmp", exist_ok=True)
     dicts = [item.model_dump() for item in body.coordinates]
     file_path = generate.generate_dxf(dicts)
+
+    # Schedule file deletion after response
+    background_tasks.add_task(remove_file, file_path)
     return FileResponse(file_path)
 
+
+# -------------------------------
+# /shift endpoint
+# -------------------------------
 @router.post("/shift")
-async def read_dxf_file(body: Coordinates):
+async def shift_dxf_file(body: Coordinates):
     dicts = [item.model_dump() for item in body.coordinates]
     dxf_util = dxf.Dxf()
     new_coordinates = dxf_util.shift_measurements(dicts, body.shifts)

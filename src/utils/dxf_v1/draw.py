@@ -27,7 +27,8 @@ def draw_entities(
     width=20, height=16, dpi=200,
     file_path=None,
     show_length=True,
-    round_lengths=True  # <-- New optional parameter
+    round_lengths=True,
+    length_fontsize=14   # <-- new parameter for bigger text
 ):
     os.makedirs("./tmp", exist_ok=True)
     if not file_path:
@@ -67,8 +68,8 @@ def draw_entities(
                     offset_text = f" ({round(offset) if round_lengths else offset})"
                 mid_x, mid_y = (start['x']+end['x'])/2, (start['y']+end['y'])/2
                 length_text = round(length) if round_lengths else length
-                ax.text(mid_x, mid_y+0.1, f"{length_text}{offset_text}", color='black', fontsize=8,
-                        ha='center', va='bottom', backgroundcolor='white')
+                ax.text(mid_x, mid_y+0.1, f"{length_text}{offset_text}", color='black', 
+                        fontsize=length_fontsize, ha='center', va='bottom', backgroundcolor='white')
 
     # Draw LWPOLYLINE
     lw2_list = grouped2.get("LWPOLYLINE", []) if entities2 else []
@@ -94,8 +95,8 @@ def draw_entities(
                         offset_text = f" ({round(offset) if round_lengths else offset})"
                 mid_x, mid_y = (x1+x2)/2, (y1+y2)/2
                 length_text = round(length) if round_lengths else length
-                ax.text(mid_x, mid_y+0.1, f"{length_text}{offset_text}", color='black', fontsize=8,
-                        ha='center', va='bottom', backgroundcolor='white')
+                ax.text(mid_x, mid_y+0.1, f"{length_text}{offset_text}", color='black', 
+                        fontsize=length_fontsize, ha='center', va='bottom', backgroundcolor='white')
 
     # Draw second entities as black dashed lines
     if entities2:

@@ -18,6 +18,10 @@ def extract_entities(dxf_path):
         if entity.dxftype() in {"3DFACE", "POLYFACE", "MESH", "POLYLINE"}:
             raise ValueError(f"3D DXF detected: contains {entity.dxftype()} entities")
 
+        # Skip text entities
+        if entity.dxftype() in {"TEXT", "MTEXT"}:
+            continue
+
         e = {
             "entity_type": entity.dxftype(),
             "color": getattr(entity.dxf, "color", None),
@@ -53,18 +57,6 @@ def extract_entities(dxf_path):
                     is_3d = True
                 verts.append({"x": v[0], "y": v[1], "z": 0.0})
             e.update({"closed": entity.closed, "vertices": verts})
-
-        # TEXT
-        elif entity.dxftype() == "TEXT":
-            pos = entity.dxf.insert
-            if pos.z != 0:
-                is_3d = True
-            e.update({
-                "text": entity.dxf.text,
-                "position": {"x": pos.x, "y": pos.y, "z": pos.z},
-                "height": entity.dxf.height,
-                "rotation": entity.dxf.rotation,
-            })
 
         extracted.append(e)
 

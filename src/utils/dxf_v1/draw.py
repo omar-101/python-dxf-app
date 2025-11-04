@@ -1,36 +1,35 @@
+import os
 import ezdxf
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from utils import unique
 import math
 
-
 def aci_to_rgb(aci_color):
-    """Convert AutoCAD Color Index (ACI) to RGB tuple normalized for matplotlib."""
     if not aci_color or aci_color < 1:
-        return (0, 0, 0)  # default black if no color
+        return (0, 0, 0)
     r, g, b = ezdxf.colors.aci2rgb(aci_color)
     return (r / 255, g / 255, b / 255)
 
-
 def line_length(start, end):
-    """Calculate Euclidean distance between two points."""
-    return math.sqrt((end['x'] - start['x']) ** 2 + (end['y'] - start['y']) ** 2)
+    return math.sqrt((end['x'] - start['x'])**2 + (end['y'] - start['y'])**2)
 
+def entity_offset(ent1, ent2):
+    mid1_x = (ent1['start']['x'] + ent1['end']['x']) / 2 if ent1.get('start') and ent1.get('end') else 0
+    mid1_y = (ent1['start']['y'] + ent1['end']['y']) / 2 if ent1.get('start') and ent1.get('end') else 0
+    mid2_x = (ent2['start']['x'] + ent2['end']['x']) / 2 if ent2.get('start') and ent2.get('end') else 0
+    mid2_y = (ent2['start']['y'] + ent2['end']['y']) / 2 if ent2.get('start') and ent2.get('end') else 0
+    return math.sqrt((mid2_x - mid1_x)**2 + (mid2_y - mid1_y)**2)
 
 def draw_entities(
-    entities: list[dict],
-    entities2: list[dict] = None,  # optional
-    width=20,
-    height=16,
-    dpi=200,
+    entities,
+    entities2=None,
+    width=20, height=16, dpi=200,
     file_path=None,
-    show_length=True
+    show_length=True,
+    round_lengths=True  # <-- New optional parameter
 ):
-    """Draw entities and optionally a second set for comparison.
-    entities → colored
-    entities2 → optional black dashed lines / black points
-    """
+    os.makedirs("./tmp", exist_ok=True)
     if not file_path:
         file_path = "./tmp/" + unique.unique_string(20) + ".png"
 
@@ -38,61 +37,88 @@ def draw_entities(
     ax.set_aspect('equal')
     ax.grid(True)
 
-    def draw_entity_list(ent_list, use_color=True, dashed=False):
-        grouped = defaultdict(list)
-        for ent in ent_list:
-            ent_type = ent.get("entity_type")
-            if ent_type:
-                grouped[ent_type].append(ent)
+    grouped1 = defaultdict(list)
+    grouped2 = defaultdict(list)
 
-        # POINT entities
-        for pt in grouped.get("POINT", []):
-            color = aci_to_rgb(pt["aci"]) if use_color else 'black'
-            ax.scatter(pt['x'], pt['y'], color=color, s=30)
+    for ent in entities:
+        grouped1[ent.get("entity_type")].append(ent)
+    if entities2:
+        for ent in entities2:
+            grouped2[ent.get("entity_type")].append(ent)
 
-        # LINE entities
-        for ln in grouped.get("LINE", []):
-            start = ln["start"]
-            end = ln["end"]
-            color = aci_to_rgb(ln["aci"]) if use_color else 'black'
-            style = '--' if dashed else '-'
-            ax.plot([start['x'], end['x']], [start['y'], end['y']], color=color, linestyle=style)
+    # Draw POINT
+    for pt in grouped1.get("POINT", []):
+        ax.scatter(pt.get('x',0), pt.get('y',0), color=aci_to_rgb(pt.get('aci')), s=30)
+    if entities2:
+        for pt in grouped2.get("POINT", []):
+            ax.scatter(pt.get('x',0), pt.get('y',0), color='black', s=30)
 
+    # Draw LINE
+    line2_list = grouped2.get("LINE", []) if entities2 else []
+    for i, ln in enumerate(grouped1.get("LINE", [])):
+        start, end = ln.get("start"), ln.get("end")
+        if start and end:
+            ax.plot([start['x'], end['x']], [start['y'], end['y']], color=aci_to_rgb(ln.get("aci")), linestyle='-')
             if show_length:
                 length = line_length(start, end)
-                mid_x = (start['x'] + end['x']) / 2
-                mid_y = (start['y'] + end['y']) / 2
-                ax.text(mid_x, mid_y + 0.1, f"{length:.2f}",
-                        color='black', fontsize=8, ha='center', va='bottom',
-                        backgroundcolor='white')
+                offset_text = ""
+                if entities2 and i < len(line2_list):
+                    offset = entity_offset(ln, line2_list[i])
+                    offset_text = f" ({round(offset) if round_lengths else offset})"
+                mid_x, mid_y = (start['x']+end['x'])/2, (start['y']+end['y'])/2
+                length_text = round(length) if round_lengths else length
+                ax.text(mid_x, mid_y+0.1, f"{length_text}{offset_text}", color='black', fontsize=8,
+                        ha='center', va='bottom', backgroundcolor='white')
 
-        # LWPOLYLINE entities
-        for poly in grouped.get("LWPOLYLINE", []):
-            pts = poly["vertices"]
-            color = aci_to_rgb(poly["aci"]) if use_color else 'black'
-            style = '--' if dashed else '-'
+    # Draw LWPOLYLINE
+    lw2_list = grouped2.get("LWPOLYLINE", []) if entities2 else []
+    for i, poly in enumerate(grouped1.get("LWPOLYLINE", [])):
+        pts = poly.get("vertices", [])
+        if not pts:
+            continue
+        if poly.get("closed"):
+            pts = pts + [pts[0]]
+        for j in range(len(pts)-1):
+            x1, y1 = pts[j]['x'], pts[j]['y']
+            x2, y2 = pts[j+1]['x'], pts[j+1]['y']
+            ax.plot([x1,x2],[y1,y2], color=aci_to_rgb(poly.get("aci")))
+            if show_length:
+                length = line_length(pts[j], pts[j+1])
+                offset_text = ""
+                if entities2 and i < len(lw2_list):
+                    pts2 = lw2_list[i].get("vertices", [])
+                    if lw2_list[i].get("closed") and pts2:
+                        pts2 = pts2 + [pts2[0]]
+                    if j < len(pts2):
+                        offset = line_length(pts[j], pts2[j])
+                        offset_text = f" ({round(offset) if round_lengths else offset})"
+                mid_x, mid_y = (x1+x2)/2, (y1+y2)/2
+                length_text = round(length) if round_lengths else length
+                ax.text(mid_x, mid_y+0.1, f"{length_text}{offset_text}", color='black', fontsize=8,
+                        ha='center', va='bottom', backgroundcolor='white')
+
+    # Draw second entities as black dashed lines
+    if entities2:
+        for ln in line2_list:
+            start, end = ln.get("start"), ln.get("end")
+            if start and end:
+                ax.plot([start['x'], end['x']], [start['y'], end['y']], color='black', linestyle='--')
+        for poly in lw2_list:
+            pts = poly.get("vertices", [])
+            if not pts:
+                continue
             if poly.get("closed"):
                 pts = pts + [pts[0]]
+            for j in range(len(pts)-1):
+                x1, y1 = pts[j]['x'], pts[j]['y']
+                x2, y2 = pts[j+1]['x'], pts[j+1]['y']
+                ax.plot([x1,x2],[y1,y2], color='black', linestyle='--')
 
-            for i in range(len(pts) - 1):
-                x1, y1 = pts[i]['x'], pts[i]['y']
-                x2, y2 = pts[i + 1]['x'], pts[i + 1]['y']
-                ax.plot([x1, x2], [y1, y2], color=color, linestyle=style)
-
-                if show_length:
-                    length = line_length(pts[i], pts[i + 1])
-                    mid_x = (x1 + x2) / 2
-                    mid_y = (y1 + y2) / 2
-                    ax.text(mid_x, mid_y + 0.1, f"{length:.2f}",
-                            color='black', fontsize=8, ha='center', va='bottom',
-                            backgroundcolor='white')
-
-    # Draw first entities (colored)
-    draw_entity_list(entities, use_color=True, dashed=False)
-
-    # Draw second entities if provided (black dashed)
-    if entities2:
-        draw_entity_list(entities2, use_color=False, dashed=True)
+    # Draw TEXT
+    for txt in grouped1.get("TEXT", []):
+        pos = txt.get('position', {})
+        x, y = pos.get('x',0), pos.get('y',0)
+        ax.text(x, y, txt.get('text',''), color=aci_to_rgb(txt.get('aci')), fontsize=txt.get('height',12))
 
     plt.title("Comparison of Entities" + (" with Lengths" if show_length else ""))
     plt.xlabel("X axis")

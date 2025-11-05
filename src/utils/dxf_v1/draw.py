@@ -28,7 +28,7 @@ def draw_entities(
     file_path=None,
     show_length=True,
     round_lengths=True,
-    length_fontsize=14   # <-- new parameter for bigger text
+    length_fontsize=14
 ):
     os.makedirs("./tmp", exist_ok=True)
     if not file_path:
@@ -71,32 +71,42 @@ def draw_entities(
                 ax.text(mid_x, mid_y+0.1, f"{length_text}{offset_text}", color='black', 
                         fontsize=length_fontsize, ha='center', va='bottom', backgroundcolor='white')
 
-    # Draw LWPOLYLINE
+    # Draw LWPOLYLINE (total length next to first segment)
     lw2_list = grouped2.get("LWPOLYLINE", []) if entities2 else []
     for i, poly in enumerate(grouped1.get("LWPOLYLINE", [])):
         pts = poly.get("vertices", [])
-        if not pts:
+        if not pts or len(pts) < 2:
             continue
-        if poly.get("closed"):
-            pts = pts + [pts[0]]
-        for j in range(len(pts)-1):
-            x1, y1 = pts[j]['x'], pts[j]['y']
-            x2, y2 = pts[j+1]['x'], pts[j+1]['y']
-            ax.plot([x1,x2],[y1,y2], color=aci_to_rgb(poly.get("aci")))
-            if show_length:
-                length = line_length(pts[j], pts[j+1])
-                offset_text = ""
-                if entities2 and i < len(lw2_list):
-                    pts2 = lw2_list[i].get("vertices", [])
-                    if lw2_list[i].get("closed") and pts2:
-                        pts2 = pts2 + [pts2[0]]
-                    if j < len(pts2):
-                        offset = line_length(pts[j], pts2[j])
-                        offset_text = f" ({round(offset) if round_lengths else offset})"
-                mid_x, mid_y = (x1+x2)/2, (y1+y2)/2
-                length_text = round(length) if round_lengths else length
-                ax.text(mid_x, mid_y+0.1, f"{length_text}{offset_text}", color='black', 
-                        fontsize=length_fontsize, ha='center', va='bottom', backgroundcolor='white')
+
+        # Prepare points for drawing (include closing if closed)
+        draw_pts = pts + [pts[0]] if poly.get("closed") else pts
+
+        # Draw polyline edges
+        for j in range(len(draw_pts)-1):
+            x1, y1 = draw_pts[j]['x'], draw_pts[j]['y']
+            x2, y2 = draw_pts[j+1]['x'], draw_pts[j+1]['y']
+            ax.plot([x1, x2], [y1, y2], color=aci_to_rgb(poly.get("aci")))
+
+        if show_length:
+            # Total length
+            full_length = sum(line_length(draw_pts[j], draw_pts[j+1]) for j in range(len(draw_pts)-1))
+
+            # Optional offset
+            offset_text = ""
+            if entities2 and i < len(lw2_list):
+                pts2 = lw2_list[i].get("vertices", [])
+                draw_pts2 = pts2 + [pts2[0]] if lw2_list[i].get("closed") else pts2
+                offset = sum(line_length(draw_pts[j], draw_pts2[j]) for j in range(min(len(draw_pts), len(draw_pts2))))
+                offset_text = f" ({round(offset) if round_lengths else offset})"
+
+            # Display next to first segment midpoint
+            x1, y1 = draw_pts[0]['x'], draw_pts[0]['y']
+            x2, y2 = draw_pts[1]['x'], draw_pts[1]['y']
+            mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+
+            length_text = round(full_length) if round_lengths else full_length
+            ax.text(mid_x, mid_y + 0.1, f"{length_text}{offset_text}", color='black',
+                    fontsize=length_fontsize, ha='center', va='bottom', backgroundcolor='white')
 
     # Draw second entities as black dashed lines
     if entities2:
@@ -108,11 +118,10 @@ def draw_entities(
             pts = poly.get("vertices", [])
             if not pts:
                 continue
-            if poly.get("closed"):
-                pts = pts + [pts[0]]
-            for j in range(len(pts)-1):
-                x1, y1 = pts[j]['x'], pts[j]['y']
-                x2, y2 = pts[j+1]['x'], pts[j+1]['y']
+            draw_pts = pts + [pts[0]] if poly.get("closed") else pts
+            for j in range(len(draw_pts)-1):
+                x1, y1 = draw_pts[j]['x'], draw_pts[j]['y']
+                x2, y2 = draw_pts[j+1]['x'], draw_pts[j+1]['y']
                 ax.plot([x1,x2],[y1,y2], color='black', linestyle='--')
 
     # Draw TEXT

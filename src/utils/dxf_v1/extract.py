@@ -2,7 +2,7 @@ import ezdxf
 
 def extract_entities(dxf_path):
     """Read a DXF file and extract supported 2D entities into a list of dicts.
-    Rejects 3D DXF files with an explicit error.
+    Rejects 3D DXF files with an explicit error. Skips text and ACI=253 entities.
     """
     try:
         doc = ezdxf.readfile(dxf_path)
@@ -22,13 +22,18 @@ def extract_entities(dxf_path):
         if entity.dxftype() in {"TEXT", "MTEXT"}:
             continue
 
+        # Get ACI
+        aci = doc.layers.get(entity.dxf.layer).color if entity.dxf.layer in doc.layers else None
+
+        # Skip ACI 253
+        if aci == 253:
+            continue
+
         e = {
             "entity_type": entity.dxftype(),
             "color": getattr(entity.dxf, "color", None),
             "layer": getattr(entity.dxf, "layer", None),
-            "aci": doc.layers.get(entity.dxf.layer).color
-            if entity.dxf.layer in doc.layers
-            else None,
+            "aci": aci,
         }
 
         # POINT

@@ -71,14 +71,13 @@ def draw_entities(
                 ax.text(mid_x, mid_y+0.1, f"{length_text}{offset_text}", color='black', 
                         fontsize=length_fontsize, ha='center', va='bottom', backgroundcolor='white')
 
-    # Draw LWPOLYLINE (total length next to first segment)
+    # Draw LWPOLYLINE (full length in center)
     lw2_list = grouped2.get("LWPOLYLINE", []) if entities2 else []
     for i, poly in enumerate(grouped1.get("LWPOLYLINE", [])):
         pts = poly.get("vertices", [])
         if not pts or len(pts) < 2:
             continue
 
-        # Prepare points for drawing (include closing if closed)
         draw_pts = pts + [pts[0]] if poly.get("closed") else pts
 
         # Draw polyline edges
@@ -88,8 +87,20 @@ def draw_entities(
             ax.plot([x1, x2], [y1, y2], color=aci_to_rgb(poly.get("aci")))
 
         if show_length:
-            # Total length
-            full_length = sum(line_length(draw_pts[j], draw_pts[j+1]) for j in range(len(draw_pts)-1))
+            # Compute segment lengths and full length
+            segment_lengths = [line_length(draw_pts[j], draw_pts[j+1]) for j in range(len(draw_pts)-1)]
+            full_length = sum(segment_lengths)
+
+            # Compute geometric center along the polyline
+            half_length = full_length / 2
+            cum_length = 0
+            for j, seg_len in enumerate(segment_lengths):
+                if cum_length + seg_len >= half_length:
+                    ratio = (half_length - cum_length) / seg_len
+                    x_mid = draw_pts[j]['x'] + ratio * (draw_pts[j+1]['x'] - draw_pts[j]['x'])
+                    y_mid = draw_pts[j]['y'] + ratio * (draw_pts[j+1]['y'] - draw_pts[j]['y'])
+                    break
+                cum_length += seg_len
 
             # Optional offset
             offset_text = ""
@@ -99,14 +110,9 @@ def draw_entities(
                 offset = sum(line_length(draw_pts[j], draw_pts2[j]) for j in range(min(len(draw_pts), len(draw_pts2))))
                 offset_text = f" ({round(offset) if round_lengths else offset})"
 
-            # Display next to first segment midpoint
-            x1, y1 = draw_pts[0]['x'], draw_pts[0]['y']
-            x2, y2 = draw_pts[1]['x'], draw_pts[1]['y']
-            mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
-
             length_text = round(full_length) if round_lengths else full_length
-            ax.text(mid_x, mid_y + 0.1, f"{length_text}{offset_text}", color='black',
-                    fontsize=length_fontsize, ha='center', va='bottom', backgroundcolor='white')
+            ax.text(x_mid, y_mid, f"{length_text}{offset_text}", color='black',
+                    fontsize=length_fontsize, ha='center', va='center', backgroundcolor='white')
 
     # Draw second entities as black dashed lines
     if entities2:

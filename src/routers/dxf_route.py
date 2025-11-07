@@ -4,8 +4,9 @@ from pydantic import BaseModel
 from typing import Optional
 import os
 
-from utils import unique, dxf
+from utils import unique
 from utils.dxf_v1 import extract, draw, generate
+from utils.dxf_shift import shift
 
 
 router = APIRouter()
@@ -116,6 +117,5 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 @router.post("/shift")
 async def shift_dxf_file(body: Coordinates):
     dicts = [item.model_dump() for item in body.coordinates]
-    dxf_util = dxf.Dxf()
-    new_coordinates = dxf_util.shift_measurements(dicts, body.shifts)
+    new_coordinates = shift.shift_dxf(dicts, body.shifts)
     return {"coordinates": new_coordinates}

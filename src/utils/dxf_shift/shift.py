@@ -110,36 +110,35 @@ def parse_data(data, to_print=False):
     inside_points = []
     ignore_points = []
     counter = 0
-    if "coordinates" in data:
-        for line in data["coordinates"]:
-            if "entity_type" in line and "layer" in line and "aci" in line:
-                if line["entity_type"].upper() in valide_entity_types and line["layer"] != "Frames":
-                    vertices = _parse_line(line)
-                    to_incease_counter = True if line["aci"] in outline_colors or line["aci"] in inside_colors else False
+    for line in data:
+        if "entity_type" in line and "layer" in line and "aci" in line:
+            if line["entity_type"].upper() in valide_entity_types and line["layer"] != "Frames":
+                vertices = _parse_line(line)
+                to_incease_counter = True if line["aci"] in outline_colors or line["aci"] in inside_colors else False
 
+                if to_print:
+                    print("###############################################################################################")
+                    print(line["entity_type"])
+                    print(vertices)
+
+                points = []
+                for point in vertices:
                     if to_print:
-                        print("###############################################################################################")
-                        print(line["entity_type"])
-                        print(vertices)
+                        print(point)
 
-                    points = []
-                    for point in vertices:
+                    if "x" in point and "y" in point:
+                        points.append(Point(point["x"], point["y"], info=[counter], color=line["aci"]))
                         if to_print:
-                            print(point)
-
-                        if "x" in point and "y" in point:
-                            points.append(Point(point["x"], point["y"], info=[counter], color=line["aci"]))
-                            if to_print:
-                                print(f"created {points[-1]}")
-                            if to_incease_counter:
-                                counter += 1
-                    
-                    if line["aci"] in outline_colors:
-                        outline_points.append(points)
-                    elif line["aci"] in inside_colors:
-                        inside_points.append(points)
-                    elif line["aci"] in ignore_colors:
-                        ignore_points.append(points)
+                            print(f"created {points[-1]}")
+                        if to_incease_counter:
+                            counter += 1
+                
+                if line["aci"] in outline_colors:
+                    outline_points.append(points)
+                elif line["aci"] in inside_colors:
+                    inside_points.append(points)
+                elif line["aci"] in ignore_colors:
+                    ignore_points.append(points)
 
     all_points = [("outline_points", outline_points), ("inside_points", inside_points), ("ignore_points", ignore_points)]
     for points in all_points:
@@ -369,20 +368,19 @@ def _update_data(data, sequence):
     _print_banner("Write Back The Updated Data")
     counter = 0
 
-    if "coordinates" in data:
-        for line in data["coordinates"]:
-            if "entity_type" in line and "layer" in line and "aci" in line:
-                if line["entity_type"].upper() in valide_entity_types and line["layer"] != "Frames":
-                    vertices = _parse_line(line)
-                    for point in vertices:
-                        if "x" in point and "y" in point and (line["aci"] in outline_colors or line["aci"] in inside_colors):
-                            if counter < len(sequence):
-                                point["x"] = sequence[counter][X]
-                                point["y"] = sequence[counter][Y]
-                                counter += 1
-                            else:
-                                print("Error: too many points to write back")
-                                sys.exit(1)
+    for line in data:
+        if "entity_type" in line and "layer" in line and "aci" in line:
+            if line["entity_type"].upper() in valide_entity_types and line["layer"] != "Frames":
+                vertices = _parse_line(line)
+                for point in vertices:
+                    if "x" in point and "y" in point and (line["aci"] in outline_colors or line["aci"] in inside_colors):
+                        if counter < len(sequence):
+                            point["x"] = sequence[counter][X]
+                            point["y"] = sequence[counter][Y]
+                            counter += 1
+                        else:
+                            print("Error: too many points to write back")
+                            sys.exit(1)
     print("\n" + "All Points Updated Successfully!" if counter == len(sequence) else "Error: did not write all points back")
     return data
 
@@ -443,6 +441,7 @@ def shift_dxf(data, shifts):
     # update the original json file data
     sequence = _create_data_sequence(new_shape.points + inside_shape_points)
     updated_data = _update_data(data, sequence)
+    print(json.dumps(updated_data))
     cleaned = [{k: v for k, v in obj.items() if v is not None} for obj in updated_data]
     return cleaned
 

@@ -443,7 +443,8 @@ def shift_dxf(data, shifts):
     # update the original json file data
     sequence = _create_data_sequence(new_shape.points + inside_shape_points)
     updated_data = _update_data(data, sequence)
-    return updated_data
+    cleaned = [{k: v for k, v in obj.items() if v is not None} for obj in updated_data]
+    return cleaned
 
 
 ############################################################################################################################################
@@ -454,4 +455,5 @@ def shift_dxf(data, shifts):
 #     data, path = _load_data_file()
 #     dshifts = [(6, 30, 1), (7,0,4), (8,0,4), (12,-3,1), (30,-2,1), (34,-15,2), (40,0,3), (72,40,1), (152,0,3), (202, 0, 1), (253,0,3)]
 #     updated_data = smartscale_main(data, dshifts)
+#     print(json.dumps(updated_data))
 #     sys.exit(0)

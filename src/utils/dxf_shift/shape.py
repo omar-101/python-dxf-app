@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
 from utils.dxf_shift.config import aci_color_code_dict
 
 class Shape:
@@ -82,4 +81,5 @@ class Shape:
     def download(self):
         self.show(to_export=True)
         return
+
 

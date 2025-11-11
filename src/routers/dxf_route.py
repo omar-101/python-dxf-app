@@ -107,7 +107,7 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
     file_path = generate.generate_dxf(dicts)
 
     # Schedule file deletion after response
-    background_tasks.add_task(remove_file, file_path)
+    # background_tasks.add_task(remove_file, file_path)
     return FileResponse(file_path)
 
 

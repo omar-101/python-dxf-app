@@ -25,10 +25,11 @@ colors_shift_dict = {
     "yellow"   : 0,
 }
 
-outline_colors = []
-inside_colors = []
-ignore_colors = []
-remove_colors = []
+outline_colors    = []
+inside_colors     = []
+ignore_colors     = []
+remove_colors     = []
+keep_point_colors = []
 
 ############################################################################################################################################
 ####################################################### Utilities ##########################################################################
@@ -77,8 +78,8 @@ def _load_data_file():
 # and fills colors_shift_dict with the shift amount for each color
 def _parse_colors_list(shifts):
     _print_banner("Colors & Shitfs")
-    categories = ["outline", "inside", "ignore", "remove"]
-    lists = [outline_colors, inside_colors, ignore_colors, remove_colors]
+    categories = ["outline", "inside", "ignore", "remove", "keep_point"]
+    lists = [outline_colors, inside_colors, ignore_colors, remove_colors, keep_point_colors]
 
     for line in shifts:
         color, shitf, code = line
@@ -113,6 +114,12 @@ def parse_data(data, to_print=False):
     for line in data:
         if "entity_type" in line and "layer" in line and "aci" in line:
             if line["entity_type"].upper() in valide_entity_types and line["layer"] != "Frames":
+                
+                ### added in v5 to only keep points that in color code "keep_point" category
+                if (line["entity_type"] == "POINT") and (line["aci"] not in keep_point_colors):
+                    continue
+                ###
+
                 vertices = _parse_line(line)
                 to_incease_counter = True if line["aci"] in outline_colors or line["aci"] in inside_colors else False
 
@@ -132,13 +139,17 @@ def parse_data(data, to_print=False):
                             print(f"created {points[-1]}")
                         if to_incease_counter:
                             counter += 1
-                
+
                 if line["aci"] in outline_colors:
                     outline_points.append(points)
                 elif line["aci"] in inside_colors:
                     inside_points.append(points)
                 elif line["aci"] in ignore_colors:
                     ignore_points.append(points)
+                ### added in v5 to only keep points that in color code "keep_point" category
+                elif line["aci"] in keep_point_colors and line["entity_type"] == "POINT":
+                    outline_points.append(points)
+                ###
 
     all_points = [("outline_points", outline_points), ("inside_points", inside_points), ("ignore_points", ignore_points)]
     for points in all_points:
@@ -158,6 +169,24 @@ def parse_simple_data(data):
     s = Shape(all_points)
     s.show()
     return all_points, []
+
+def view(points):
+    n = len(points)
+    all_points = []
+    for group in points:
+        all_points += group
+
+    for i, point in enumerate(all_points):
+        c = aci_color_code_dict[point._color_code]
+        plt.plot(point.x, point.y, 'o', c=c, zorder=100)
+        plt.text(point.x+5, point.y, str(i%n), fontsize=12, ha='left', va='bottom', color=c)
+
+        # to draw the edge
+        next_point = all_points[(i+1) % n]
+        plt.plot((point.x, next_point.x), (point.y, next_point.y), c=aci_color_code_dict[next_point._color_code], zorder=99)
+
+    plt.show()
+    return
 
 ############################################################################################################################################
 ###################################################### Smartscale ##########################################################################
@@ -371,6 +400,12 @@ def _update_data(data, sequence):
     for line in data:
         if "entity_type" in line and "layer" in line and "aci" in line:
             if line["entity_type"].upper() in valide_entity_types and line["layer"] != "Frames":
+
+                ### added in v5 to only keep points that in color code "keep_point" category
+                if (line["entity_type"] == "POINT") and (line["aci"] not in keep_point_colors):
+                    continue
+                ###
+
                 vertices = _parse_line(line)
                 for point in vertices:
                     if "x" in point and "y" in point and (line["aci"] in outline_colors or line["aci"] in inside_colors):
@@ -414,7 +449,7 @@ def shift_dxf(data, shifts):
 
     # split the points from the data by color category
     outline_points, inside_points, ignore_points = parse_data(data)
-    
+
     # create the outline shape
     points = match_points(outline_points)
     shape = Shape(points)
@@ -441,9 +476,9 @@ def shift_dxf(data, shifts):
     # update the original json file data
     sequence = _create_data_sequence(new_shape.points + inside_shape_points)
     updated_data = _update_data(data, sequence)
-    print(json.dumps(updated_data))
     cleaned = [{k: v for k, v in obj.items() if v is not None} for obj in updated_data]
     return cleaned
+
 
 
 ############################################################################################################################################
@@ -451,8 +486,7 @@ def shift_dxf(data, shifts):
 ############################################################################################################################################
 
 # if __name__ == "__main__":
-#     data, path = _load_data_file()
-#     dshifts = [(6, 30, 1), (7,0,4), (8,0,4), (12,-3,1), (30,-2,1), (34,-15,2), (40,0,3), (72,40,1), (152,0,3), (202, 0, 1), (253,0,3)]
-#     updated_data = smartscale_main(data, dshifts)
-#     print(json.dumps(updated_data))
-#     sys.exit(0)
+#      data, path = _load_data_file()
+#      dshifts = [(6, 30, 1), (7,0,4), (8,0,4), (12,-3,1), (30,-2,1), (34,-15,2), (40,0,3), (72,40,1), (152,0,3), (202, 0, 1), (253,0,3)]
+#      updated_data = smartscale_main(data, dshifts)
+#      sys.exit(0)

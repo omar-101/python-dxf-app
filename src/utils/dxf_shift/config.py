@@ -2,7 +2,8 @@ colors_categories_dict = {
     1: "outline",
     2: "inside",
     3: "ignore",
-    4: "remove"
+    4: "remove",
+    5: "keep_point"
 }
 
 aci_color_code_dict = {

@@ -65,8 +65,9 @@ class Shape:
     def show(self, to_export=False):
         for i in range(self.n):
             point = self.points[i]
-            plt.plot(point.x, point.y, 'o', c=aci_color_code_dict[point._color_code], zorder=100)
-            plt.text(point.x*(1+(2*i/100)), point.y, str(i), fontsize=12, ha='right', va='bottom', color="red")
+            c = aci_color_code_dict[point._color_code]
+            plt.plot(point.x, point.y, 'o', c=c, zorder=100)
+            plt.text(point.x+5, point.y, str(i%self.n), fontsize=12, ha='left', va='bottom', color=c)
 
             # to draw the edge
             next_point = self.points[(i+1) % self.n]
@@ -81,5 +82,4 @@ class Shape:
     def download(self):
         self.show(to_export=True)
         return
-
 

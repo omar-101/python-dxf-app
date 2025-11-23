@@ -90,7 +90,8 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
     os.makedirs("./tmp", exist_ok=True)
     dicts = [item.model_dump() for item in body.coordinates]
     dicts2 = [item.model_dump() for item in body.coordinates2] if body.coordinates2 else None
-    file_path = draw.draw_entities(dicts, entities2=dicts2 if dicts2 else None)
+    dicts3 = body.shifts if body.shifts else None
+    file_path = draw.draw_entities(dicts,entities2=dicts2,shifts=dicts3)
 
     # Schedule file deletion after response
     background_tasks.add_task(remove_file, file_path)

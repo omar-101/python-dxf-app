@@ -1,4 +1,4 @@
-from utils.dxf_shift.config import aci_color_code_dict
+from scripts.shift_script.config import aci_color_code_dict
 
 class Point:
   def __init__(self, x, y, info=[], color=0):

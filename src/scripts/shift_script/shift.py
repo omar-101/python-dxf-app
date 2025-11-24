@@ -7,9 +7,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import List
 
-from utils.dxf_shift.point import Point
-from utils.dxf_shift.shape import Shape
-from utils.dxf_shift.config import colors_categories_dict, aci_color_code_dict, aci_color_code_inverse_dict, smartscale_3d
+from scripts.shift_script.point import Point
+from scripts.shift_script.shape import Shape
+from scripts.shift_script.config import colors_categories_dict, aci_color_code_dict, aci_color_code_inverse_dict, smartscale_3d
 
 X = 0 ; Y = 1
 valide_entity_types = ["LWPOLYLINE", "POINT", "LINE"]
@@ -441,7 +441,7 @@ def write_back(path, shape):
 ######################################################### MAIN #############################################################################
 ############################################################################################################################################
 
-def shift_dxf(data, shifts):
+def main(data, shifts):
     _print_logo()
 
     # save the info in colors_shift_dict and the 4 color categories lists

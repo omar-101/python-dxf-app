@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from utils.dxf_shift.config import aci_color_code_dict
+from scripts.shift_script.config import aci_color_code_dict
 
 class Shape:
     def __init__(self, list_of_points, color="blue"):

@@ -6,7 +6,9 @@ import os
 
 from utils import unique
 from utils.dxf_v1 import extract, draw, generate
-from utils.dxf_shift import shift
+import importlib
+
+# from utils.dxf_shift import shift
 
 
 router = APIRouter()
@@ -117,6 +119,8 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 # -------------------------------
 @router.post("/shift")
 async def shift_dxf_file(body: Coordinates):
+    module_name = "scripts.shift_script.shift"
+    shift_module = importlib.import_module(module_name)
     dicts = [item.model_dump() for item in body.coordinates]
-    new_coordinates = shift.shift_dxf(dicts, body.shifts)
+    new_coordinates = shift_module.main(dicts, body.shifts)
     return {"coordinates": new_coordinates}

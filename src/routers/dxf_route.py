@@ -47,8 +47,8 @@ class Coordinate(BaseModel):
 class Coordinates(BaseModel):
     coordinates: list[Coordinate]
     coordinates2: Optional[list[Coordinate]] = None
-    shifts: list[list[int]] | None = None
-
+    shifts: Optional[list[list[int]]] = None
+    show_length: Optional[bool] = None
 
 # -------------------------------
 # Helper to delete files in background
@@ -89,14 +89,31 @@ async def read_dxf_file(file: UploadFile):
 # -------------------------------
 @router.post("/draw")
 async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
+    # Ensure temporary folder exists
     os.makedirs("./tmp", exist_ok=True)
-    dicts = [item.model_dump() for item in body.coordinates]
-    dicts2 = [item.model_dump() for item in body.coordinates2] if body.coordinates2 else None
-    dicts3 = body.shifts if body.shifts else None
-    file_path = draw.draw_entities(dicts,entities2=dicts2,shifts=dicts3)
+
+    # Convert required coordinates to dicts
+    coords1 = [c.model_dump() for c in body.coordinates]
+
+    # Convert optional coordinates2 if it exists
+    coords2 = [c.model_dump() for c in body.coordinates2] if body.coordinates2 else None
+
+    # Optional shifts and show_length are already in correct format
+    shifts = body.shifts
+    show_length = body.show_length
+
+    # Call the drawing function
+    file_path = draw.draw_entities(
+        coords1,
+        entities2=coords2,
+        shifts=shifts,
+        show_length=show_length
+    )
 
     # Schedule file deletion after response
     background_tasks.add_task(remove_file, file_path)
+
+    # Return file directly
     return FileResponse(file_path)
 
 

@@ -8,32 +8,31 @@ on:
 
 jobs:
   test-dxf:
-    runs-on: ubuntu-latest   # CI runner with Ubuntu
+    runs-on: self-hosted   # your own runner
 
     steps:
-      # 1. Checkout code
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Install dependencies (xvfb for headless GUI)
-    #   - name: Install dependencies
-    #     run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y xvfb
 
-      # 3. Create test DXF and output folder
-      - name: Prepare test files
+      - name: Prepare directories
         run: |
           mkdir -p tmp dwg_out
-          echo "0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nENDSEC\n0\nSECTION\n2\nBLOCKS\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n11\n100\n21\n100\n0\nENDSEC\n0\nSECTION\n2\nOBJECTS\n0\nENDSEC\n0\nEOF" > tmp/test.dxf
 
-      # 4. Make the AppImage executable
-      - name: Make ODA AppImage executable
-        run: chmod +x bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage
+      - name: Create test DXF
+        run: |
+          echo -e "0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nENDSEC\n0\nSECTION\n2\nBLOCKS\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n11\n100\n21\n100\n0\nENDSEC\n0\nSECTION\n2\nOBJECTS\n0\nENDSEC\n0\nEOF" > tmp/test.dxf
 
-      # 5. Run the conversion
-      - name: Convert DXF to DWG
-        run: xvfb-run bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage \
-              tmp/test.dxf dwg_out ACAD2018 DWG 0 1
+      - name: Extract ODA AppImage
+        run: |
+          chmod +x bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage
+          ./bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage --appimage-extract
 
-      # 6. List converted files
-      - name: Check DWG output
+      - name: Run DXF to DWG conversion
+        run: |
+          xvfb-run ./squashfs-root/usr/bin/ODAFileConverter /tmp/test.dxf /dwg_out ACAD2018 DWG 0 1
+
+      - name: List converted files
         run: ls -la dwg_out

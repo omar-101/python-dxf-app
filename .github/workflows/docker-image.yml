@@ -18,9 +18,9 @@ jobs:
         uses: actions/checkout@v4
 
       # -----------------------------
-      # 2️⃣ Install dependencies for ODA
+      # 2️⃣ Install ODA dependencies
       # -----------------------------
-      - name: Install ODA dependencies
+      - name: Install dependencies for ODA
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb libx11-6 libxext6 libxrender1 \
@@ -34,7 +34,13 @@ jobs:
         run: mkdir -p dwg_out
 
       # -----------------------------
-      # 4️⃣ Extract and run ODA AppImage
+      # 4️⃣ Make AppImage executable
+      # -----------------------------
+      - name: Make ODA AppImage executable
+        run: chmod +x ./bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage
+
+      # -----------------------------
+      # 5️⃣ Extract and run ODA AppImage
       # -----------------------------
       - name: Convert DXF → DWG
         run: |
@@ -43,7 +49,7 @@ jobs:
           ls -la dwg_out
 
       # -----------------------------
-      # 5️⃣ Stop & remove old Docker (optional)
+      # 6️⃣ Stop & remove old Docker (optional)
       # -----------------------------
       - name: Stop running container
         run: docker stop dxf-app
@@ -58,7 +64,7 @@ jobs:
         continue-on-error: true
 
       # -----------------------------
-      # 6️⃣ Build Docker image
+      # 7️⃣ Build Docker image
       # -----------------------------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -67,7 +73,7 @@ jobs:
         run: docker build -t dxf-app .
 
       # -----------------------------
-      # 7️⃣ Run Docker container
+      # 8️⃣ Run Docker container
       # -----------------------------
       - name: Run Docker container
         run: docker run -d --name dxf-app -p 80:80 dxf-app

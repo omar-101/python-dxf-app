@@ -8,33 +8,32 @@ on:
 
 jobs:
   test-dxf:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest   # CI runner with Ubuntu
 
     steps:
-      - name: Checkout code
+      # 1. Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Install dependencies (xvfb for headless GUI)
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb libfuse2
+        run: sudo apt-get update && sudo apt-get install -y xvfb
 
-      - name: Prepare ODA AppImage
-        run: |
-          mkdir -p bin
-          # Move your ODAFileConverter AppImage to bin/
-          mv ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage bin/
-          chmod +x bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage
-
-      - name: Create test DXF
+      # 3. Create test DXF and output folder
+      - name: Prepare test files
         run: |
           mkdir -p tmp dwg_out
-          echo -e "0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nENDSEC\n0\nSECTION\n2\nBLOCKS\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n11\n100\n21\n100\n0\nENDSEC\n0\nSECTION\n2\nOBJECTS\n0\nENDSEC\n0\nEOF" > tmp/test.dxf
+          echo "0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nENDSEC\n0\nSECTION\n2\nBLOCKS\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n11\n100\n21\n100\n0\nENDSEC\n0\nSECTION\n2\nOBJECTS\n0\nENDSEC\n0\nEOF" > tmp/test.dxf
 
-      - name: Run ODA conversion
-        run: |
-          xvfb-run bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage \
-            tmp/test.dxf dwg_out ACAD2018 DWG 0 1
+      # 4. Make the AppImage executable
+      - name: Make ODA AppImage executable
+        run: chmod +x bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage
 
-      - name: List converted files
+      # 5. Run the conversion
+      - name: Convert DXF to DWG
+        run: xvfb-run bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage \
+              tmp/test.dxf dwg_out ACAD2018 DWG 0 1
+
+      # 6. List converted files
+      - name: Check DWG output
         run: ls -la dwg_out

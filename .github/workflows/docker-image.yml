@@ -1,4 +1,4 @@
-name: Docker Image CI with ODA Conversion
+name: Docker Image CI
 
 on:
   push:
@@ -8,72 +8,23 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    runs-on: [ main ]
     steps:
-      # -----------------------------
-      # 1️⃣ Checkout code
-      # -----------------------------
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # -----------------------------
-      # 2️⃣ Install ODA dependencies
-      # -----------------------------
-      - name: Install dependencies for ODA
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb libx11-6 libxext6 libxrender1 \
-          libxcb1 libxkbcommon0 libgl1 libglu1-mesa \
-          libfontconfig1 mesa-utils wget xz-utils
-
-      # -----------------------------
-      # 3️⃣ Prepare DWG output folder
-      # -----------------------------
-      - name: Create output folder
-        run: mkdir -p dwg_out
-
-      # -----------------------------
-      # 4️⃣ Make AppImage executable
-      # -----------------------------
-      - name: Make ODA AppImage executable
-        run: chmod +x ./bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage
-
-      # -----------------------------
-      # 5️⃣ Extract and run ODA AppImage
-      # -----------------------------
-      # - name: Convert DXF → DWG
-      #   run: |
-      #     ./bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage --appimage-extract
-      #     xvfb-run ./squashfs-root/usr/bin/ODAFileConverter ./tmp/test.dxf dwg_out ACAD2018 DWG 0 1
-      #     ls -la dwg_out
-
-      # -----------------------------
-      # 6️⃣ Stop & remove old Docker (optional)
-      # -----------------------------
-      - name: Stop running container
+      - name: stop running container
         run: docker stop dxf-app
         continue-on-error: true
-
-      - name: Remove old container
+      - name: delete container 
         run: docker rm dxf-app
         continue-on-error: true
-
-      - name: Remove old image
+      - name: delete image 
         run: docker rmi dxf-app
         continue-on-error: true
-
-      # -----------------------------
-      # 7️⃣ Build Docker image
-      # -----------------------------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Build Docker image
         run: docker build -t dxf-app .
-
-      # -----------------------------
-      # 8️⃣ Run Docker container
-      # -----------------------------
       - name: Run Docker container
-        run: docker run -d --name dxf-app -p 80:80 dxf-app
+        run: |
+          docker run -d --name dxf-app -p 80:80 dxf-app

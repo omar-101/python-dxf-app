@@ -8,7 +8,7 @@ on:
 
 jobs:
   test-dxf:
-    runs-on: [development]
+    runs-on: [self-hosted]
 
     steps:
       - name: Checkout code

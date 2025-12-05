@@ -8,27 +8,33 @@ on:
 
 jobs:
   test-dxf:
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Install dependencies
         run: |
-          docker build -t dxf-app .
+          sudo apt-get update
+          sudo apt-get install -y xvfb libfuse2
+
+      - name: Prepare ODA AppImage
+        run: |
+          mkdir -p bin
+          # Move your ODAFileConverter AppImage to bin/
+          mv ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage bin/
+          chmod +x bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage
 
       - name: Create test DXF
         run: |
           mkdir -p tmp dwg_out
-          echo "0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nENDSEC\n0\nSECTION\n2\nBLOCKS\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n11\n100\n21\n100\n0\nENDSEC\n0\nSECTION\n2\nOBJECTS\n0\nENDSEC\n0\nEOF" > tmp/test.dxf
+          echo -e "0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nENDSEC\n0\nSECTION\n2\nBLOCKS\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n11\n100\n21\n100\n0\nENDSEC\n0\nSECTION\n2\nOBJECTS\n0\nENDSEC\n0\nEOF" > tmp/test.dxf
 
-      - name: Run conversion inside container
+      - name: Run ODA conversion
         run: |
-          docker run --rm -v ${{ github.workspace }}/tmp:/tmp \
-            -v ${{ github.workspace }}/dwg_out:/dwg_out \
-            dxf-app \
-            bash -c "xvfb-run ./squashfs-root/usr/bin/ODAFileConverter /tmp/test.dxf /dwg_out ACAD2018 DWG 0 1"
+          xvfb-run bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage \
+            tmp/test.dxf dwg_out ACAD2018 DWG 0 1
 
       - name: List converted files
         run: ls -la dwg_out

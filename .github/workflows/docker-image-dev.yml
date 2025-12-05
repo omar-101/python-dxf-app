@@ -8,14 +8,11 @@ on:
 
 jobs:
   test-dxf:
-    runs-on: self-hosted   # your own runner
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-    #   - name: Install dependencies
-    #     run: sudo apt-get update && sudo apt-get install -y xvfb
 
       - name: Prepare directories
         run: |
@@ -23,7 +20,7 @@ jobs:
 
       - name: Create test DXF
         run: |
-          echo -e "0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nENDSEC\n0\nSECTION\n2\nBLOCKS\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n11\n100\n21\n100\n0\nENDSEC\n0\nSECTION\n2\nOBJECTS\n0\nENDSEC\n0\nEOF" > tmp/test.dxf
+          echo "0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nENDSEC\n0\nSECTION\n2\nBLOCKS\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n11\n100\n21\n100\n0\nENDSEC\n0\nSECTION\n2\nOBJECTS\n0\nENDSEC\n0\nEOF" > tmp/test.dxf
 
       - name: Extract ODA AppImage
         run: |
@@ -32,7 +29,7 @@ jobs:
 
       - name: Run DXF to DWG conversion
         run: |
-          xvfb-run ./squashfs-root/usr/bin/ODAFileConverter /tmp/test.dxf /dwg_out ACAD2018 DWG 0 1
+          ./squashfs-root/usr/bin/ODAFileConverter tmp/test.dxf dwg_out ACAD2018 DWG 0 1
 
       - name: List converted files
         run: ls -la dwg_out

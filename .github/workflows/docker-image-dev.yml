@@ -14,9 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install xvfb
-        run: apt-get update && apt-get install -y xvfb
-
       - name: Build Docker image
         run: |
           docker build -t dxf-app .

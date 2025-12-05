@@ -42,11 +42,11 @@ jobs:
       # -----------------------------
       # 5️⃣ Extract and run ODA AppImage
       # -----------------------------
-      - name: Convert DXF → DWG
-        run: |
-          ./bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage --appimage-extract
-          xvfb-run ./squashfs-root/usr/bin/ODAFileConverter ./tmp/test.dxf dwg_out ACAD2018 DWG 0 1
-          ls -la dwg_out
+      # - name: Convert DXF → DWG
+      #   run: |
+      #     ./bin/ODAFileConverter_QT6_lnxX64_8.3dll_26.10.AppImage --appimage-extract
+      #     xvfb-run ./squashfs-root/usr/bin/ODAFileConverter ./tmp/test.dxf dwg_out ACAD2018 DWG 0 1
+      #     ls -la dwg_out
 
       # -----------------------------
       # 6️⃣ Stop & remove old Docker (optional)

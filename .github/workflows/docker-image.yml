@@ -19,9 +19,10 @@ jobs:
       - name: Install dependencies for ODA
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libx11-6 libxext6 libxrender1 \
-          libxcb1 libxkbcommon0 libgl1-mesa-glx libglu1-mesa \
-          libfontconfig1 mesa-utils
+          sudo apt-get install -y \
+            xvfb libx11-6 libxext6 libxrender1 \
+            libxcb1 libxkbcommon0 libgl1 libglu1-mesa \
+            libfontconfig1 mesa-utils
 
       # -----------------------------
       # Step: Run ODA to convert DXF → DWG

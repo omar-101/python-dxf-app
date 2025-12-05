@@ -3,15 +3,18 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
+import subprocess
+from pathlib import Path
 
 from utils import unique
-from utils.dxf_v1 import extract, draw, generate
+from utils.dxf_v1 import extract, draw, generate, merge_cor, cal_length, convert
 import importlib
 
-# from utils.dxf_shift import shift
+os.environ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
 
 
 router = APIRouter()
+TMP_DIR = "./tmp"
 
 
 class Triple(BaseModel):
@@ -49,6 +52,7 @@ class Coordinates(BaseModel):
     coordinates2: Optional[list[Coordinate]] = None
     shifts: Optional[list[list[int]]] = None
     show_length: Optional[bool] = None
+
 
 # -------------------------------
 # Helper to delete files in background
@@ -100,14 +104,20 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
 
     # Optional shifts and show_length are already in correct format
     shifts = body.shifts
+
+    # show_length
     show_length = body.show_length
+
+    if show_length or shifts:
+        coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
 
     # Call the drawing function
     file_path = draw.draw_entities(
-        coords1,
-        entities2=coords2,
-        shifts=shifts,
-        show_length=show_length
+        entities=(
+            merge_cor.merge_entities_with_dashed(coords1, coords2)
+            if coords2
+            else coords1
+        )
     )
 
     # Schedule file deletion after response
@@ -123,11 +133,32 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
 @router.post("/generate")
 async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
     os.makedirs("./tmp", exist_ok=True)
-    dicts = [item.model_dump() for item in body.coordinates]
-    file_path = generate.generate_dxf(dicts)
+
+    # Convert required coordinates to dicts
+    coords1 = [c.model_dump() for c in body.coordinates]
+
+    # Convert optional coordinates2 if it exists
+    coords2 = [c.model_dump() for c in body.coordinates2] if body.coordinates2 else None
+
+    # Optional shifts and show_length are already in correct format
+    shifts = body.shifts
+
+    # show_length
+    show_length = body.show_length
+
+    if show_length or shifts:
+        coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
+
+    file_path = generate.generate_dxf(
+        entities=(
+            merge_cor.merge_entities_with_dashed(coords1, coords2)
+            if coords2
+            else coords1
+        )
+    )
 
     # Schedule file deletion after response
-    # background_tasks.add_task(remove_file, file_path)
+    background_tasks.add_task(remove_file, file_path)
     return FileResponse(file_path)
 
 
@@ -141,3 +172,46 @@ async def shift_dxf_file(body: Coordinates):
     dicts = [item.model_dump() for item in body.coordinates]
     new_coordinates = shift_module.main(dicts, body.shifts)
     return {"coordinates": new_coordinates}
+
+
+# -------------------------------
+# /convert-dwg endpoint
+# -------------------------------
+@router.post("/convert-dwg")
+async def convert_to_dwg(body: Coordinates, background_tasks: BackgroundTasks):
+    # -------------------------------
+    # Prepare coordinates
+    # -------------------------------
+    coords1 = [c.model_dump() for c in body.coordinates]
+    coords2 = [c.model_dump() for c in body.coordinates2] if body.coordinates2 else None
+    shifts = body.shifts
+    show_length = body.show_length
+
+    if show_length or shifts:
+        coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
+
+    # -------------------------------
+    # 1) Generate DXF
+    # -------------------------------
+    dxf_path = generate.generate_dxf(
+        entities=(
+            merge_cor.merge_entities_with_dashed(coords1, coords2)
+            if coords2
+            else coords1
+        )
+    )
+
+    # -------------------------------
+    # 2) Convert DXF → DWG
+    # -------------------------------
+    dwg_path = convert.convert_dxf_to_dwg(dxf_path, output_dir="/tmp")
+
+    # -------------------------------
+    # 3) Cleanup temp files
+    # -------------------------------
+    # background_tasks.add_task(remove_file, dxf_path)
+    # background_tasks.add_task(remove_file, dwg_path)
+
+    return FileResponse(
+        dwg_path, media_type="application/acad", filename="converted.dwg"
+    )

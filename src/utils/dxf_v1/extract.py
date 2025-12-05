@@ -1,5 +1,6 @@
 import ezdxf
 
+
 def extract_entities(dxf_path):
     """Read a DXF file and extract supported 2D entities into a list of dicts.
     Rejects 3D DXF files with an explicit error. Skips text and ACI=253 entities.
@@ -23,7 +24,11 @@ def extract_entities(dxf_path):
             continue
 
         # Get ACI
-        aci = doc.layers.get(entity.dxf.layer).color if entity.dxf.layer in doc.layers else None
+        aci = (
+            doc.layers.get(entity.dxf.layer).color
+            if entity.dxf.layer in doc.layers
+            else None
+        )
 
         # Skip ACI 253
         if aci == 253:
@@ -48,10 +53,16 @@ def extract_entities(dxf_path):
             start_z, end_z = entity.dxf.start.z, entity.dxf.end.z
             if start_z != 0 or end_z != 0:
                 is_3d = True
-            e.update({
-                "start": {"x": entity.dxf.start.x, "y": entity.dxf.start.y, "z": start_z},
-                "end": {"x": entity.dxf.end.x, "y": entity.dxf.end.y, "z": end_z},
-            })
+            e.update(
+                {
+                    "start": {
+                        "x": entity.dxf.start.x,
+                        "y": entity.dxf.start.y,
+                        "z": start_z,
+                    },
+                    "end": {"x": entity.dxf.end.x, "y": entity.dxf.end.y, "z": end_z},
+                }
+            )
 
         # LWPOLYLINE
         elif entity.dxftype() == "LWPOLYLINE":

@@ -1,9 +1,10 @@
 import ezdxf
 from utils import unique
 
+
 def generate_dxf(entities: list[dict], file_path=None):
     """Generate a DXF file from a list of extracted entities, preserving layers."""
-    
+
     if not file_path:
         file_path = "./tmp/" + unique.unique_string(20) + ".dxf"
 
@@ -30,8 +31,7 @@ def generate_dxf(entities: list[dict], file_path=None):
         # ---- Add entities ----
         if etype == "POINT":
             msp.add_point(
-                (ent["x"], ent["y"], ent.get("z", 0.0)),
-                dxfattribs={"layer": layer}
+                (ent["x"], ent["y"], ent.get("z", 0.0)), dxfattribs={"layer": layer}
             )
 
         elif etype == "LINE":
@@ -41,17 +41,13 @@ def generate_dxf(entities: list[dict], file_path=None):
                 msp.add_line(
                     (start["x"], start["y"], start.get("z", 0.0)),
                     (end["x"], end["y"], end.get("z", 0.0)),
-                    dxfattribs={"layer": layer}
+                    dxfattribs={"layer": layer},
                 )
 
         elif etype == "LWPOLYLINE":
             pts = [(v["x"], v["y"]) for v in ent["vertices"]]  # drop Z for LWPOLYLINE
             msp.add_lwpolyline(
-                pts,
-                dxfattribs={
-                    "layer": layer,
-                    "closed": ent.get("closed", False)
-                }
+                pts, dxfattribs={"layer": layer, "closed": ent.get("closed", False)}
             )
 
         else:

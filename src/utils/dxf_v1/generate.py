@@ -1,5 +1,6 @@
 import ezdxf
 from utils import unique
+from ezdxf.enums import TextEntityAlignment
 
 
 def generate_dxf(entities: list[dict], file_path=None):
@@ -49,6 +50,23 @@ def generate_dxf(entities: list[dict], file_path=None):
             msp.add_lwpolyline(
                 pts, dxfattribs={"layer": layer, "closed": ent.get("closed", False)}
             )
+
+        elif etype == "TEXT":
+            pos = ent.get("position")
+            if pos:
+                text_entity = msp.add_text(
+                    ent.get("text", ""),
+                    dxfattribs={
+                        "layer": layer,
+                        "height": ent.get("height", 2.5),
+                        "color": aci,
+                    },
+                )
+                # Default alignment can be LEFT if not specified
+                align = ent.get("align", TextEntityAlignment.LEFT)
+                text_entity.set_placement(
+                    (pos["x"], pos["y"], pos.get("z", 0.0)), align=align
+                )
 
         else:
             print(f"⚠️ Skipping unsupported entity type: {etype}")

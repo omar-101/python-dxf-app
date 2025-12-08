@@ -1,19 +1,25 @@
 def add_length_layer_with_shifts_note(
-    entities, shifts_array=None, layer_name="LENGTHS", round_lengths=True, text_height=2
+    entities,
+    shifts_array=None,
+    layer_name="LENGTHS",
+    round_lengths=True,
+    text_height=16,
+    sink_size=4,  # number of LENGTHS per sink
 ):
     from copy import deepcopy
     import math
 
     new_entities = deepcopy(entities)
-
-    # Create lookup dict for aci -> offset value
     aci_to_offset = {item[0]: item[1] for item in shifts_array} if shifts_array else {}
+
+    sink_counter = 0
+    sink_index = 1
 
     for ent in entities:
         etype = ent.get("entity_type")
         aci = ent.get("aci", 0)
 
-        # Calculate length (already okay)
+        # Calculate midpoint
         if etype == "LINE":
             start, end = ent["start"], ent["end"]
             length_val = math.sqrt(
@@ -21,7 +27,6 @@ def add_length_layer_with_shifts_note(
             )
             mid_x = (start["x"] + end["x"]) / 2
             mid_y = (start["y"] + end["y"]) / 2
-
         elif etype == "LWPOLYLINE":
             pts = ent.get("vertices", [])
             if len(pts) < 2:
@@ -53,10 +58,17 @@ def add_length_layer_with_shifts_note(
 
         # Round length
         length_text = str(round(length_val)) if round_lengths else str(length_val)
-
-        # Append shift value from shifts_array if ACI matches
         if aci in aci_to_offset:
             length_text += f"({aci_to_offset[aci]})"
+
+        # Determine sink_index
+        if aci == 152:
+            sink_counter += 1
+            if sink_counter > sink_size:
+                sink_counter = 1
+                sink_index += 1
+        else:
+            sink_index = 0  # not a sink
 
         new_entities.append(
             {
@@ -65,6 +77,8 @@ def add_length_layer_with_shifts_note(
                 "color": 256,
                 "layer": layer_name,
                 "aci": 0,
+                "is_electric_gas_sink": aci == 152,
+                "sink_index": sink_index if aci == 152 else None,
                 "position": {"x": mid_x, "y": mid_y, "z": 0.0},
                 "height": text_height,
             }

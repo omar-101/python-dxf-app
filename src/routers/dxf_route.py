@@ -3,12 +3,11 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
-import subprocess
-from pathlib import Path
 
 from utils import unique
-from utils.dxf_v1 import extract, draw, generate, merge_cor, cal_length, convert
+from utils.dxf_v1 import extract, draw, generate, merge_cor, cal_length, convert, markar
 import importlib
+import json
 
 os.environ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
 
@@ -110,6 +109,7 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
 
     if show_length or shifts:
         coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
+        coords1 = markar.gas_sink_marker(coords1) if show_length else coords1
 
     # Call the drawing function
     file_path = draw.draw_entities(
@@ -148,6 +148,7 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 
     if show_length or shifts:
         coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
+        coords1 = markar.gas_sink_marker(coords1) if show_length else coords1
 
     file_path = generate.generate_dxf(
         entities=(

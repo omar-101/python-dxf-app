@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 
-def merge_entities_with_dashed(entities1, entities2):
+def merge_entities_with_dashed(entities1, entities2, type):
     """
     Merge entities1 and entities2.
     - entities1 remains unchanged.
@@ -20,7 +20,11 @@ def merge_entities_with_dashed(entities1, entities2):
     dashed_entities2 = deepcopy(entities2)
 
     for i, ent in enumerate(dashed_entities2):
-        ent["dashed"] = True
+        if type == "draw":
+            ent["dashed"] = True
+        if type == "dxf":
+            ent["dashed"] = True
+            ent["aci"] = 0
 
         # Get corresponding layer from entities1, default "0" if not enough entities
         base_layer = entities1[i].get("layer", "0") if i < len(entities1) else "0"

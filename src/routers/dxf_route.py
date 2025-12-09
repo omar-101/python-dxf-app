@@ -114,7 +114,7 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
     # Call the drawing function
     file_path = draw.draw_entities(
         entities=(
-            merge_cor.merge_entities_with_dashed(coords1, coords2)
+            merge_cor.merge_entities_with_dashed(coords1, coords2, type="draw")
             if coords2
             else coords1
         )
@@ -152,7 +152,7 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 
     file_path = generate.generate_dxf(
         entities=(
-            merge_cor.merge_entities_with_dashed(coords1, coords2)
+            merge_cor.merge_entities_with_dashed(coords1, coords2, type="dxf")
             if coords2
             else coords1
         )

@@ -8,6 +8,7 @@ from utils import unique
 from utils.dxf_v1 import extract, draw, generate, merge_cor, cal_length, convert, markar
 import importlib
 import json
+import traceback
 
 os.environ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
 
@@ -169,10 +170,24 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 @router.post("/shift")
 async def shift_dxf_file(body: Coordinates):
     module_name = "scripts.shift_script.shift"
-    shift_module = importlib.import_module(module_name)
-    dicts = [item.model_dump() for item in body.coordinates]
-    new_coordinates = shift_module.main(dicts, body.shifts)
-    return {"coordinates": new_coordinates}
+    try:
+        shift_module = importlib.import_module(module_name)
+        dicts = [item.model_dump() for item in body.coordinates]
+        new_coordinates = shift_module.main(dicts, body.shifts)
+        return {"success": True, "coordinates": new_coordinates}
+
+    except Exception as e:
+        # Get full traceback as a string
+        tb_str = traceback.format_exc()
+        # Raise HTTP 500 with detailed error
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": tb_str,
+            },
+        )
 
 
 # -------------------------------

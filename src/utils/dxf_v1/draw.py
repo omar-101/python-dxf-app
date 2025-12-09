@@ -26,10 +26,6 @@ def draw_entities(
     dpi=200,
     file_path=None,
 ):
-    """
-    Draw DXF-like entities (POINT, LINE, LWPOLYLINE, TEXT) using matplotlib.
-    Lengths are already included as TEXT in the 'LENGTHS' layer.
-    """
     os.makedirs("./tmp", exist_ok=True)
     if not file_path:
         file_path = "./tmp/" + unique.unique_string(20) + ".png"
@@ -38,43 +34,54 @@ def draw_entities(
     ax.set_aspect("equal")
     ax.grid(True)
 
-    # Group entities by type
     grouped = defaultdict(list)
     for ent in entities:
         grouped[ent.get("entity_type")].append(ent)
 
-    # Draw POINT
+    # ---- POINT ----
     for pt in grouped.get("POINT", []):
         ax.scatter(
             pt.get("x", 0), pt.get("y", 0), color=aci_to_rgb(pt.get("aci")), s=30
         )
 
-    # Draw LINE
+    # ---- LINE ----
     for ln in grouped.get("LINE", []):
         start, end = ln.get("start"), ln.get("end")
-        if start and end:
-            ax.plot(
-                [start["x"], end["x"]],
-                [start["y"], end["y"]],
-                color=aci_to_rgb(ln.get("aci")),
-                linestyle="-",
-            )
+        if not start or not end:
+            continue
 
-    # Draw LWPOLYLINE
+        is_dashed = ln.get("dashed", False)
+
+        ax.plot(
+            [start["x"], end["x"]],
+            [start["y"], end["y"]],
+            color="black" if is_dashed else aci_to_rgb(ln.get("aci")),
+            linestyle="--" if is_dashed else "-",
+            linewidth=1.2,
+        )
+
+    # ---- LWPOLYLINE ----
     for poly in grouped.get("LWPOLYLINE", []):
         pts = poly.get("vertices", [])
         if not pts or len(pts) < 2:
             continue
 
         draw_pts = pts + [pts[0]] if poly.get("closed") else pts
+        is_dashed = poly.get("dashed", False)
 
-        # Draw edges
         for j in range(len(draw_pts) - 1):
             x1, y1 = draw_pts[j]["x"], draw_pts[j]["y"]
             x2, y2 = draw_pts[j + 1]["x"], draw_pts[j + 1]["y"]
-            ax.plot([x1, x2], [y1, y2], color=aci_to_rgb(poly.get("aci")))
 
-    # Draw TEXT (including lengths in 'LENGTHS' layer)
+            ax.plot(
+                [x1, x2],
+                [y1, y2],
+                color="black" if is_dashed else aci_to_rgb(poly.get("aci")),
+                linestyle="--" if is_dashed else "-",
+                linewidth=1.2,
+            )
+
+    # ---- TEXT ----
     for txt in grouped.get("TEXT", []):
         pos = txt.get("position", {})
         x, y = pos.get("x", 0), pos.get("y", 0)

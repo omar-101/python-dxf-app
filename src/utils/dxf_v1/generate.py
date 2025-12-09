@@ -12,7 +12,18 @@ def generate_dxf(entities: list[dict], file_path=None):
     doc = ezdxf.new(dxfversion="R2010")
     msp = doc.modelspace()
 
-    # Keep track of created layers to avoid duplicates
+    # -------------------------------------------------------
+    # Ensure DASHED linetype exists (safe even if already present)
+    # -------------------------------------------------------
+    if "DASHED" not in doc.linetypes:
+        doc.linetypes.new(
+            "DASHED",
+            dxfattribs={
+                "description": "Dashed __ __ __",
+                "pattern": [40, -20],  # simple dash pattern
+            },
+        )
+
     existing_layers = {}
 
     for ent in entities:
@@ -20,37 +31,63 @@ def generate_dxf(entities: list[dict], file_path=None):
         layer = ent.get("layer", "0")
         aci = ent.get("aci", 7)  # default color if missing
 
-        # ---- Create layer if not already created ----
+        # Create layer if needed
         if layer not in existing_layers:
             try:
                 doc.layers.new(name=layer, dxfattribs={"color": aci})
             except ezdxf.DXFTableEntryError:
-                # Layer already exists, skip
                 pass
             existing_layers[layer] = aci
 
-        # ---- Add entities ----
+        # -------------------------------
+        # ENTITY: POINT
+        # -------------------------------
         if etype == "POINT":
             msp.add_point(
-                (ent["x"], ent["y"], ent.get("z", 0.0)), dxfattribs={"layer": layer}
+                (ent["x"], ent["y"], ent.get("z", 0.0)),
+                dxfattribs={"layer": layer},
             )
 
+        # -------------------------------
+        # ENTITY: LINE (supports dashed)
+        # -------------------------------
         elif etype == "LINE":
             start = ent.get("start")
             end = ent.get("end")
             if start and end:
+                dxf_attribs = {
+                    "layer": layer,
+                    "color": aci,
+                    "linetype": "DASHED" if ent.get("dashed") else "CONTINUOUS",
+                }
+
                 msp.add_line(
                     (start["x"], start["y"], start.get("z", 0.0)),
                     (end["x"], end["y"], end.get("z", 0.0)),
-                    dxfattribs={"layer": layer},
+                    dxfattribs=dxf_attribs,
                 )
 
+        # -----------------------------------------
+        # ENTITY: LWPOLYLINE (supports dashed)
+        # -----------------------------------------
         elif etype == "LWPOLYLINE":
-            pts = [(v["x"], v["y"]) for v in ent["vertices"]]  # drop Z for LWPOLYLINE
+            pts = [(v["x"], v["y"]) for v in ent["vertices"]]
+
+            dxf_attribs = {
+                "layer": layer,
+                "color": aci,
+                "closed": ent.get("closed", False),
+                "linetype": "DASHED" if ent.get("dashed") else "CONTINUOUS",
+            }
+
             msp.add_lwpolyline(
-                pts, dxfattribs={"layer": layer, "closed": ent.get("closed", False)}
+                pts,
+                dxfattribs=dxf_attribs,
             )
 
+        # -------------------------------
+        # ENTITY: TEXT
+        # -------------------------------
         elif etype == "TEXT":
             pos = ent.get("position")
             if pos:
@@ -62,16 +99,15 @@ def generate_dxf(entities: list[dict], file_path=None):
                         "color": aci,
                     },
                 )
-                # Default alignment can be LEFT if not specified
                 align = ent.get("align", TextEntityAlignment.LEFT)
                 text_entity.set_placement(
-                    (pos["x"], pos["y"], pos.get("z", 0.0)), align=align
+                    (pos["x"], pos["y"], pos.get("z", 0.0)),
+                    align=align,
                 )
 
         else:
             print(f"⚠️ Skipping unsupported entity type: {etype}")
 
-    # Save the DXF
     doc.saveas(file_path)
     print(f"✅ DXF successfully saved at: {file_path}")
     return file_path

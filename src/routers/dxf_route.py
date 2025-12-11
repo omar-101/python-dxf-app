@@ -5,9 +5,17 @@ from typing import Optional
 import os
 
 from utils import unique
-from utils.dxf_v1 import extract, draw, generate, merge_cor, cal_length, convert, markar
+from utils.dxf_v1 import (
+    extract,
+    draw,
+    generate,
+    merge_cor,
+    cal_length,
+    convert,
+    markar,
+    filter,
+)
 import importlib
-import json
 import traceback
 
 os.environ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
@@ -151,13 +159,13 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
         coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
         coords1 = markar.gas_sink_marker(coords1) if show_length else coords1
 
-    file_path = generate.generate_dxf(
-        entities=(
-            merge_cor.merge_entities_with_dashed(coords1, coords2, type="dxf")
-            if coords2
-            else coords1
-        )
+    merged_entities = (
+        merge_cor.merge_entities_with_dashed(coords1, coords2, type="dxf")
+        if coords2
+        else coords1
     )
+
+    file_path = generate.generate_dxf(entities=merged_entities)
 
     # Schedule file deletion after response
     background_tasks.add_task(remove_file, file_path)
@@ -173,7 +181,8 @@ async def shift_dxf_file(body: Coordinates):
     try:
         shift_module = importlib.import_module(module_name)
         dicts = [item.model_dump() for item in body.coordinates]
-        new_coordinates = shift_module.main(dicts, body.shifts)
+        filterd_coordinates = filter.filter_points(dicts, body.shifts)
+        new_coordinates = shift_module.main(filterd_coordinates, body.shifts)
         return {"success": True, "coordinates": new_coordinates}
 
     except Exception as e:

@@ -16,7 +16,7 @@ def extract_entities(dxf_path):
 
     for entity in msp:
         # Reject known 3D entity types immediately
-        if entity.dxftype() in {"3DFACE", "POLYFACE", "MESH", "POLYLINE"}:
+        if entity.dxftype() in {"3DFACE", "POLYFACE", "MESH"}:
             raise ValueError(f"3D DXF detected: contains {entity.dxftype()} entities")
 
         # Skip text entities
@@ -64,13 +64,26 @@ def extract_entities(dxf_path):
                 }
             )
 
+        # POLYLINE
+        if entity.dxftype() == "POLYLINE":
+            # Check if 3D by looking at vertices Z values
+            verts = []
+            for v in entity.points():
+                if len(v) >= 3 and v[2] != 0:
+                    raise ValueError("3D DXF detected: POLYLINE has non-zero Z")
+                verts.append({"x": v[0], "y": v[1], "z": 0.0})
+            e.update(
+                {
+                    "entity_type": "LWPOLYLINE",
+                    "closed": False,
+                    "vertices": verts,
+                }
+            )
+
         # LWPOLYLINE
         elif entity.dxftype() == "LWPOLYLINE":
             verts = []
             for v in entity.get_points():
-                # v = (x, y, start_width, end_width, bulge)
-                if len(v) >= 3 and v[2] != 0:
-                    is_3d = True
                 verts.append({"x": v[0], "y": v[1], "z": 0.0})
             e.update({"closed": entity.closed, "vertices": verts})
 

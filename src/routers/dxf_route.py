@@ -17,6 +17,8 @@ from utils.dxf_v1 import (
 )
 import importlib
 import traceback
+import sys
+
 
 os.environ["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "true"
 
@@ -179,8 +181,10 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 async def shift_dxf_file(body: Coordinates):
     module_name = "scripts.shift_script.shift"
     try:
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+
         shift_module = importlib.import_module(module_name)
-        shift_module = importlib.reload(shift_module)
         dicts = [item.model_dump() for item in body.coordinates]
         filterd_coordinates = filter.filter_points(dicts, body.shifts)
         new_coordinates = shift_module.main(filterd_coordinates, body.shifts)

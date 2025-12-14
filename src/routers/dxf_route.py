@@ -180,6 +180,7 @@ async def shift_dxf_file(body: Coordinates):
     module_name = "scripts.shift_script.shift"
     try:
         shift_module = importlib.import_module(module_name)
+        shift_module = importlib.reload(shift_module)
         dicts = [item.model_dump() for item in body.coordinates]
         filterd_coordinates = filter.filter_points(dicts, body.shifts)
         new_coordinates = shift_module.main(filterd_coordinates, body.shifts)

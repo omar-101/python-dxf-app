@@ -1,5 +1,3 @@
-
-
 import sys
 import json
 import math
@@ -9,36 +7,44 @@ from typing import List
 
 from scripts.shift_script.point import Point
 from scripts.shift_script.shape import Shape
-from scripts.shift_script.config import colors_categories_dict, aci_color_code_dict, aci_color_code_inverse_dict, smartscale_3d
+from scripts.shift_script.config import (
+    colors_categories_dict,
+    aci_color_code_dict,
+    aci_color_code_inverse_dict,
+    smartscale_3d,
+)
 
-X = 0 ; Y = 1
+X = 0
+Y = 1
 valide_entity_types = ["LWPOLYLINE", "POINT", "LINE"]
 
 colors_shift_dict = {
-    "purple"   : 0,
-    "darkgray" : 0,
-    "orange"   : 0,
-    "green"    : 0,
-    "red"      : 0,
-    "blue"     : 0,
-    "gray"     : 0,
-    "yellow"   : 0,
+    "purple": 0,
+    "darkgray": 0,
+    "orange": 0,
+    "green": 0,
+    "red": 0,
+    "blue": 0,
+    "gray": 0,
+    "yellow": 0,
 }
 
-outline_colors    = []
-inside_colors     = []
-ignore_colors     = []
-remove_colors     = []
+outline_colors = []
+inside_colors = []
+ignore_colors = []
+remove_colors = []
 keep_point_colors = []
 
 ############################################################################################################################################
 ####################################################### Utilities ##########################################################################
 ############################################################################################################################################
 
+
 def _print_logo():
     for line in smartscale_3d:
         print(line)
     return
+
 
 def _print_banner(text):
     text = " " + text + " "
@@ -46,19 +52,20 @@ def _print_banner(text):
     min_side = 5
     N = len(text)
 
-    side = int(max(min_side, (min_len-N)/2))
+    side = int(max(min_side, (min_len - N) / 2))
     print("")
-    print("#" * int(2*side+N))
-    print("#"*side + text + "#"*side)
-    print("#" * int(2*side+N))
+    print("#" * int(2 * side + N))
+    print("#" * side + text + "#" * side)
+    print("#" * int(2 * side + N))
     return
+
 
 def _load_data_file():
     # _print_banner("Load Data File")
     args = sys.argv
     if len(args) < 2:
         print("Error: please provide the json file path")
-        sys.exit(1)
+        # sys.exit(1)
     filename = args[1]
     try:
         with open(filename, "r") as f:
@@ -67,32 +74,43 @@ def _load_data_file():
         return data, filename
     except FileNotFoundError:
         print(f"Error: {filename} not found")
-        sys.exit(1)
+        # sys.exit(1)
     return
+
 
 ############################################################################################################################################
 ##################################################### Data Parsing #########################################################################
 ############################################################################################################################################
+
 
 # divides the colors into 4 lists according to the categories code from shifts
 # and fills colors_shift_dict with the shift amount for each color
 def _parse_colors_list(shifts):
     _print_banner("Colors & Shitfs")
     categories = ["outline", "inside", "ignore", "remove", "keep_point"]
-    lists = [outline_colors, inside_colors, ignore_colors, remove_colors, keep_point_colors]
+    lists = [
+        outline_colors,
+        inside_colors,
+        ignore_colors,
+        remove_colors,
+        keep_point_colors,
+    ]
 
     for line in shifts:
         color, shitf, code = line
         colors_shift_dict[aci_color_code_dict[color]] = shitf
-        lists[code-1].append(color)
+        lists[code - 1].append(color)
 
     for i in range(len(lists)):
         print(f"\n{categories[i]} colors list:")
         for color in lists[i]:
             shitf = colors_shift_dict[aci_color_code_dict[color]]
-            print(f"{aci_color_code_dict[color]} ({("+" if shitf > 0 else "") + str(shitf)})")
+            print(
+                f"{aci_color_code_dict[color]} ({("+" if shitf > 0 else "") + str(shitf)})"
+            )
 
     return
+
 
 def _parse_line(line):
     if line["entity_type"] == "LWPOLYLINE":
@@ -105,6 +123,7 @@ def _parse_line(line):
         vertices = []
     return vertices
 
+
 def parse_data(data, to_print=False):
     _print_banner("Parse Data")
     outline_points = []
@@ -113,18 +132,29 @@ def parse_data(data, to_print=False):
     counter = 0
     for line in data:
         if "entity_type" in line and "layer" in line and "aci" in line:
-            if line["entity_type"].upper() in valide_entity_types and line["layer"] != "Frames":
-                
+            if (
+                line["entity_type"].upper() in valide_entity_types
+                and line["layer"] != "Frames"
+            ):
+
                 ### added in v5 to only keep points that in color code "keep_point" category
-                if (line["entity_type"] == "POINT") and (line["aci"] not in keep_point_colors):
+                if (line["entity_type"] == "POINT") and (
+                    line["aci"] not in keep_point_colors
+                ):
                     continue
                 ###
 
                 vertices = _parse_line(line)
-                to_incease_counter = True if line["aci"] in outline_colors or line["aci"] in inside_colors else False
+                to_incease_counter = (
+                    True
+                    if line["aci"] in outline_colors or line["aci"] in inside_colors
+                    else False
+                )
 
                 if to_print:
-                    print("###############################################################################################")
+                    print(
+                        "###############################################################################################"
+                    )
                     print(line["entity_type"])
                     print(vertices)
 
@@ -134,7 +164,14 @@ def parse_data(data, to_print=False):
                         print(point)
 
                     if "x" in point and "y" in point:
-                        points.append(Point(point["x"], point["y"], info=[counter], color=line["aci"]))
+                        points.append(
+                            Point(
+                                point["x"],
+                                point["y"],
+                                info=[counter],
+                                color=line["aci"],
+                            )
+                        )
                         if to_print:
                             print(f"created {points[-1]}")
                         if to_incease_counter:
@@ -147,11 +184,17 @@ def parse_data(data, to_print=False):
                 elif line["aci"] in ignore_colors:
                     ignore_points.append(points)
                 ### added in v5 to only keep points that in color code "keep_point" category
-                elif line["aci"] in keep_point_colors and line["entity_type"] == "POINT":
+                elif (
+                    line["aci"] in keep_point_colors and line["entity_type"] == "POINT"
+                ):
                     outline_points.append(points)
                 ###
 
-    all_points = [("outline_points", outline_points), ("inside_points", inside_points), ("ignore_points", ignore_points)]
+    all_points = [
+        ("outline_points", outline_points),
+        ("inside_points", inside_points),
+        ("ignore_points", ignore_points),
+    ]
     for points in all_points:
         print(f"\n++++++++++ {points[0]} ++++++++++")
         for i, points_group in enumerate(points[1]):
@@ -161,14 +204,16 @@ def parse_data(data, to_print=False):
 
     return outline_points, inside_points, ignore_points
 
+
 def parse_simple_data(data):
     all_points = []
     for point in data:
         all_points.append(Point(point["X"], point["Y"], info=[""], color=12))
-    
+
     s = Shape(all_points)
     s.show()
     return all_points, []
+
 
 def view(points):
     n = len(points)
@@ -178,19 +223,34 @@ def view(points):
 
     for i, point in enumerate(all_points):
         c = aci_color_code_dict[point._color_code]
-        plt.plot(point.x, point.y, 'o', c=c, zorder=100)
-        plt.text(point.x+5, point.y, str(i%n), fontsize=12, ha='left', va='bottom', color=c)
+        plt.plot(point.x, point.y, "o", c=c, zorder=100)
+        plt.text(
+            point.x + 5,
+            point.y,
+            str(i % n),
+            fontsize=12,
+            ha="left",
+            va="bottom",
+            color=c,
+        )
 
         # to draw the edge
-        next_point = all_points[(i+1) % n]
-        plt.plot((point.x, next_point.x), (point.y, next_point.y), c=aci_color_code_dict[next_point._color_code], zorder=99)
+        next_point = all_points[(i + 1) % n]
+        plt.plot(
+            (point.x, next_point.x),
+            (point.y, next_point.y),
+            c=aci_color_code_dict[next_point._color_code],
+            zorder=99,
+        )
 
     plt.show()
     return
 
+
 ############################################################################################################################################
 ###################################################### Smartscale ##########################################################################
 ############################################################################################################################################
+
 
 def draw_shapes(shapes, title="shapes", to_export=False):
     for shape in shapes:
@@ -199,23 +259,40 @@ def draw_shapes(shapes, title="shapes", to_export=False):
         for i in range(n):
             point = points[i]
             c = aci_color_code_dict[point._color_code] if color is None else color
-            plt.plot(point.x, point.y, 'o', c=c, zorder=100)
+            plt.plot(point.x, point.y, "o", c=c, zorder=100)
             if color is None:
-                plt.text(point.x+5, point.y, str((i+1)%n), fontsize=12, ha='left', va='bottom', color=c)
+                plt.text(
+                    point.x + 5,
+                    point.y,
+                    str((i + 1) % n),
+                    fontsize=12,
+                    ha="left",
+                    va="bottom",
+                    color=c,
+                )
 
             # to draw the edge
-            next_point = points[(i+1) % n]
+            next_point = points[(i + 1) % n]
             c = aci_color_code_dict[next_point._color_code] if color is None else color
             linestyle = "-" if color is None else "--"
             linewidth = 1 if color is None else 1
             alpha = 1 if color is None else 1
-            plt.plot((point.x, next_point.x), (point.y, next_point.y), linestyle=linestyle, linewidth=linewidth, alpha=alpha, c=c, zorder=99)
+            plt.plot(
+                (point.x, next_point.x),
+                (point.y, next_point.y),
+                linestyle=linestyle,
+                linewidth=linewidth,
+                alpha=alpha,
+                c=c,
+                zorder=99,
+            )
 
     if to_export:
         plt.savefig(f"{title}.png")
     else:
         plt.show()
     return
+
 
 def _extract_piece_points(source, index, destination, to_reverse):
     if source and source[index]:
@@ -227,11 +304,12 @@ def _extract_piece_points(source, index, destination, to_reverse):
         if destination:
             common_point = piece.pop(0)
             destination[-1]._info += common_point._info
-        
+
         # copy all remaining points in order
         for point in piece:
             destination.append(point)
     return
+
 
 def match_points(all_points):
     if not all_points:
@@ -239,48 +317,66 @@ def match_points(all_points):
     _print_banner("Match Points")
     print(all_points)
     result = []
-    _extract_piece_points(source=all_points, index=0, destination=result, to_reverse=False)
-    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    _extract_piece_points(
+        source=all_points, index=0, destination=result, to_reverse=False
+    )
+    print(
+        "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    )
     print(result)
 
     had_match = True
     while all_points and had_match:
-        last_point = result[-1] # search for new match with the last point of last matched piece
-        had_match = False # to ensure ach point find a match in each iteration
+        last_point = result[
+            -1
+        ]  # search for new match with the last point of last matched piece
+        had_match = False  # to ensure ach point find a match in each iteration
         for i, piece in enumerate(all_points):
             if piece[0] == last_point:
-                _extract_piece_points(source=all_points, index=i, destination=result, to_reverse=False)
+                _extract_piece_points(
+                    source=all_points, index=i, destination=result, to_reverse=False
+                )
                 had_match = True
             elif piece[-1] == last_point:
-                _extract_piece_points(source=all_points, index=i, destination=result, to_reverse=True)
+                _extract_piece_points(
+                    source=all_points, index=i, destination=result, to_reverse=True
+                )
                 had_match = True
-    
+
     if len(all_points) != 0 or result[0] != result[-1]:
         print("Error: not a closed shape")
         # sys.exit(1)
-    
+
     last_point = result.pop(-1)
     result[0]._info += last_point._info
     result[0]._color_code = last_point._color_code
     return result
 
+
 def _get_intersection_point(line1: tuple[Point, Point], line2: tuple[Point, Point]):
     p1, p2 = line1
     p3, p4 = line2
 
-    denom = (p1.x-p2.x)*(p3.y-p4.y) - (p1.y-p2.y)*(p3.x-p4.x)
+    denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x)
     if denom == 0:
         print("parallel lines")
         return None
 
-    px = ((p1.x*p2.y - p1.y*p2.x)*(p3.x-p4.x) - (p1.x-p2.x)*(p3.x*p4.y - p3.y*p4.x)) / denom
-    py = ((p1.x*p2.y - p1.y*p2.x)*(p3.y-p4.y) - (p1.y-p2.y)*(p3.x*p4.y - p3.y*p4.x)) / denom
+    px = (
+        (p1.x * p2.y - p1.y * p2.x) * (p3.x - p4.x)
+        - (p1.x - p2.x) * (p3.x * p4.y - p3.y * p4.x)
+    ) / denom
+    py = (
+        (p1.x * p2.y - p1.y * p2.x) * (p3.y - p4.y)
+        - (p1.y - p2.y) * (p3.x * p4.y - p3.y * p4.x)
+    ) / denom
     return (px, py)
+
 
 def _create_new_shape(shape, index, new_point1, new_point2):
     n = shape.n
     i1 = index
-    i2 = (index+1) % n
+    i2 = (index + 1) % n
 
     # get the original points' info
     new_point1._info = shape.points[i1]._info
@@ -294,6 +390,7 @@ def _create_new_shape(shape, index, new_point1, new_point2):
     new_shape.change_point(index=i1, new_point=new_point1)
     new_shape.change_point(index=i2, new_point=new_point2)
     return new_shape
+
 
 def move_edge(shape, p1_index, p2_index, delta):
     points = shape.points
@@ -309,27 +406,40 @@ def move_edge(shape, p1_index, p2_index, delta):
         raise ValueError("not an edge")
 
     # positive shape option
-    positive_normal = Point(-dy/length, dx/length)
-    p1_pos = p1 + positive_normal*abs_delta
-    p2_pos = p2 + positive_normal*abs_delta
-    positive_shape = _create_new_shape(shape=shape, index=p1_index, new_point1=p1_pos, new_point2=p2_pos)
+    positive_normal = Point(-dy / length, dx / length)
+    p1_pos = p1 + positive_normal * abs_delta
+    p2_pos = p2 + positive_normal * abs_delta
+    positive_shape = _create_new_shape(
+        shape=shape, index=p1_index, new_point1=p1_pos, new_point2=p2_pos
+    )
 
     # negative shape option
-    negative_normal = Point(dy/length, -dx/length)
-    p1_neg = p1 + negative_normal*abs_delta
-    p2_neg = p2 + negative_normal*abs_delta
-    negative_shape = _create_new_shape(shape=shape, index=p1_index, new_point1=p1_neg, new_point2=p2_neg)
+    negative_normal = Point(dy / length, -dx / length)
+    p1_neg = p1 + negative_normal * abs_delta
+    p2_neg = p2 + negative_normal * abs_delta
+    negative_shape = _create_new_shape(
+        shape=shape, index=p1_index, new_point1=p1_neg, new_point2=p2_neg
+    )
 
     if delta >= 0:
-        return (p1_pos, p2_pos) if positive_shape.area > negative_shape.area else (p1_neg, p2_neg)
+        return (
+            (p1_pos, p2_pos)
+            if positive_shape.area > negative_shape.area
+            else (p1_neg, p2_neg)
+        )
     else:
-        return (p1_pos, p2_pos) if positive_shape.area < negative_shape.area else (p1_neg, p2_neg)
+        return (
+            (p1_pos, p2_pos)
+            if positive_shape.area < negative_shape.area
+            else (p1_neg, p2_neg)
+        )
+
 
 def applay_edges_movements(shape, colors_shift_dict):
     edges_after_moving = []
     for i in range(shape.n):
         # edge color is the secound point's color
-        j = (i+1) % shape.n
+        j = (i + 1) % shape.n
         color_code = shape.points[j]._color_code
         color = aci_color_code_dict[color_code]
 
@@ -339,30 +449,32 @@ def applay_edges_movements(shape, colors_shift_dict):
         if shift != 0:
             # applay the shift on the edge
             print(f"moving {color} Edge({i},{i+1}) by {shift}")
-            new_edge = move_edge(shape, i, (i+1), shift)
+            new_edge = move_edge(shape, i, (i + 1), shift)
             edges_after_moving.append(new_edge)
         else:
             # save the edge without change
             edges_after_moving.append((shape.points[i], shape.points[j]))
-    
+
     print("\nedges_after_moving:")
     for e in range(len(edges_after_moving)):
         print(f"Edge {e} : {edges_after_moving[e]}")
 
     return edges_after_moving
 
+
 def connect_edges(edges):
     n = len(edges)
     points = []
     print("\nconnecting the new edges:")
     for i in range(n):
-        j = (i+1) % n
+        j = (i + 1) % n
         intersection_point = _get_intersection_point(edges[i], edges[j])
         print(f"intersection_point {i},{j} : {intersection_point}")
         point = Point(intersection_point[X], intersection_point[Y])
         points.append(point)
 
     return Shape(points)
+
 
 def smartscale(shape, shifts):
     _print_banner("Moving Edges")
@@ -371,27 +483,30 @@ def smartscale(shape, shifts):
 
     # copy the original Shape's info into the new Shape
     for i in range(shape.n):
-        j = (i-1) % shape.n
+        j = (i - 1) % shape.n
         new_shape.points[j]._info = shape.points[i]._info
         new_shape.points[j]._color_code = shape.points[i]._color_code
 
     return new_shape
 
+
 ############################################################################################################################################
 ###################################################### Write Back ##########################################################################
 ############################################################################################################################################
+
 
 def _create_data_sequence(points):
     max_index = 0
     for point in points:
         max_index = max(max(point._info), max_index)
-    
-    sequence = [0 for _ in range(max_index+1)]
+
+    sequence = [0 for _ in range(max_index + 1)]
     for point in points:
         for index in point._info:
             sequence[index] = (point.x, point.y)
-    
+
     return sequence
+
 
 def _update_data(data, sequence):
     _print_banner("Write Back The Updated Data")
@@ -399,25 +514,42 @@ def _update_data(data, sequence):
 
     for line in data:
         if "entity_type" in line and "layer" in line and "aci" in line:
-            if line["entity_type"].upper() in valide_entity_types and line["layer"] != "Frames":
+            if (
+                line["entity_type"].upper() in valide_entity_types
+                and line["layer"] != "Frames"
+            ):
 
                 ### added in v5 to only keep points that in color code "keep_point" category
-                if (line["entity_type"] == "POINT") and (line["aci"] not in keep_point_colors):
+                if (line["entity_type"] == "POINT") and (
+                    line["aci"] not in keep_point_colors
+                ):
                     continue
                 ###
 
                 vertices = _parse_line(line)
                 for point in vertices:
-                    if "x" in point and "y" in point and (line["aci"] in outline_colors or line["aci"] in inside_colors):
+                    if (
+                        "x" in point
+                        and "y" in point
+                        and (
+                            line["aci"] in outline_colors
+                            or line["aci"] in inside_colors
+                        )
+                    ):
                         if counter < len(sequence):
                             point["x"] = sequence[counter][X]
                             point["y"] = sequence[counter][Y]
                             counter += 1
                         else:
                             print("Error: too many points to write back")
-                            sys.exit(1)
-    print("\n" + "All Points Updated Successfully!" if counter == len(sequence) else "Error: did not write all points back")
+                            # sys.exit(1)
+    print(
+        "\n" + "All Points Updated Successfully!"
+        if counter == len(sequence)
+        else "Error: did not write all points back"
+    )
     return data
+
 
 ### use in case of outlines only ###
 def write_back(path, shape):
@@ -441,6 +573,7 @@ def write_back(path, shape):
 ######################################################### MAIN #############################################################################
 ############################################################################################################################################
 
+
 def main(data, shifts):
     _print_logo()
 
@@ -454,7 +587,7 @@ def main(data, shifts):
     points = match_points(outline_points)
     shape = Shape(points)
     shape.show()
-    
+
     # create the inner shape (if exists)
     print(f"\ninside_shape {inside_points}")
     # inside_points = match_points(inside_points)
@@ -471,14 +604,17 @@ def main(data, shifts):
     # draw the outlines, inner points and extras
     extras = [(e, None) for e in ignore_points]
     inside_shape_points = inside_shape.points if inside_shape else []
-    draw_shapes([(shape.points, "black"), (new_shape.points, None), (inside_shape_points, None)] + extras, "test_100")
-    
+    draw_shapes(
+        [(shape.points, "black"), (new_shape.points, None), (inside_shape_points, None)]
+        + extras,
+        "test_100",
+    )
+
     # update the original json file data
     sequence = _create_data_sequence(new_shape.points + inside_shape_points)
     updated_data = _update_data(data, sequence)
     cleaned = [{k: v for k, v in obj.items() if v is not None} for obj in updated_data]
     return cleaned
-
 
 
 ############################################################################################################################################

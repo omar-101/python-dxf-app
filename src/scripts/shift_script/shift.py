@@ -65,7 +65,7 @@ def _load_data_file():
     args = sys.argv
     if len(args) < 2:
         print("Error: please provide the json file path")
-        # sys.exit(1)
+        sys.exit(1)
     filename = args[1]
     try:
         with open(filename, "r") as f:
@@ -74,7 +74,7 @@ def _load_data_file():
         return data, filename
     except FileNotFoundError:
         print(f"Error: {filename} not found")
-        # sys.exit(1)
+        sys.exit(1)
     return
 
 
@@ -345,6 +345,8 @@ def match_points(all_points):
 
     if len(all_points) != 0 or result[0] != result[-1]:
         print("Error: not a closed shape")
+        raise RuntimeError("Error: not a closed shape")
+
         # sys.exit(1)
 
     last_point = result.pop(-1)
@@ -542,6 +544,7 @@ def _update_data(data, sequence):
                             counter += 1
                         else:
                             print("Error: too many points to write back")
+                            raise RuntimeError("Error: too many points to write back")
                             # sys.exit(1)
     print(
         "\n" + "All Points Updated Successfully!"

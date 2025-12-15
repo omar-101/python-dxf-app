@@ -4,7 +4,6 @@ def add_length_layer_with_shifts_note(
     layer_name="LENGTHS",
     round_lengths=True,
     text_height=16,
-    sink_size=4,  # number of LENGTHS per sink
 ):
     from copy import deepcopy
     import math
@@ -61,15 +60,6 @@ def add_length_layer_with_shifts_note(
         if aci in aci_to_offset:
             length_text += f"({aci_to_offset[aci]})"
 
-        # Determine sink_index
-        if aci == 152:
-            sink_counter += 1
-            if sink_counter > sink_size:
-                sink_counter = 1
-                sink_index += 1
-        else:
-            sink_index = 0  # not a sink
-
         new_entities.append(
             {
                 "entity_type": "TEXT",
@@ -77,8 +67,6 @@ def add_length_layer_with_shifts_note(
                 "color": 256,
                 "layer": layer_name,
                 "aci": 0,
-                "is_electric_gas_sink": aci == 152,
-                "sink_index": sink_index if aci == 152 else None,
                 "position": {"x": mid_x, "y": mid_y, "z": 0.0},
                 "height": text_height,
             }

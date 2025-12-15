@@ -120,7 +120,6 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
 
     if show_length or shifts:
         coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
-        coords1 = markar.gas_sink_marker(coords1) if show_length else coords1
 
     # Call the drawing function
     file_path = draw.draw_entities(
@@ -159,7 +158,6 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 
     if show_length or shifts:
         coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
-        coords1 = markar.gas_sink_marker(coords1) if show_length else coords1
 
     merged_entities = (
         merge_cor.merge_entities_with_dashed(coords1, coords2, type="dxf")
@@ -179,7 +177,7 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 # -------------------------------
 @router.post("/shift")
 async def shift_dxf_file(body: Coordinates):
-    module_name = "scripts.shift_script.shift"
+    module_name = "scripts.shift_script_v6.shift"
     try:
         if module_name in sys.modules:
             del sys.modules[module_name]

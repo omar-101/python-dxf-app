@@ -11,9 +11,6 @@ def add_length_layer_with_shifts_note(
     new_entities = deepcopy(entities)
     aci_to_offset = {item[0]: item[1] for item in shifts_array} if shifts_array else {}
 
-    sink_counter = 0
-    sink_index = 1
-
     for ent in entities:
         etype = ent.get("entity_type")
         aci = ent.get("aci", 0)

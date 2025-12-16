@@ -62,6 +62,7 @@ class Coordinates(BaseModel):
     coordinates2: Optional[list[Coordinate]] = None
     shifts: Optional[list[list[int]]] = None
     show_length: Optional[bool] = None
+    text_height: Optional[int] = None
 
 
 # -------------------------------
@@ -117,9 +118,13 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
 
     # show_length
     show_length = body.show_length
+    # length font size
+    text_height = body.text_height
 
     if show_length or shifts:
-        coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
+        coords1 = cal_length.add_length_layer_with_shifts_note(
+            coords1, shifts, text_height
+        )
 
     # Call the drawing function
     file_path = draw.draw_entities(

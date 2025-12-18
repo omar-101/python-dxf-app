@@ -1,9 +1,8 @@
 def add_length_layer_with_shifts_note(
     entities,
     shifts_array=None,
-    layer_name="LENGTHS",
     round_lengths=True,
-    text_height=16,
+    text_height=any,
 ):
     from copy import deepcopy
     import math
@@ -62,7 +61,7 @@ def add_length_layer_with_shifts_note(
                 "entity_type": "TEXT",
                 "text": length_text,
                 "color": 256,
-                "layer": layer_name,
+                "layer": "LENGTHS",
                 "aci": 0,
                 "position": {"x": mid_x, "y": mid_y, "z": 0.0},
                 "height": text_height,

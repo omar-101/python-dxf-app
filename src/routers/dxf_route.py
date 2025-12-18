@@ -61,8 +61,8 @@ class Coordinates(BaseModel):
     coordinates: list[Coordinate]
     coordinates2: Optional[list[Coordinate]] = None
     shifts: Optional[list[list[int]]] = None
-    show_length: Optional[bool] = None
-    text_height: Optional[int] = None
+    show_length: Optional[bool] = False
+    text_height: Optional[int] = 16
 
 
 # -------------------------------
@@ -122,8 +122,10 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
     text_height = body.text_height
 
     if show_length or shifts:
+        if shifts:
+            coords1 = markar.create_markers(coords1, shifts, text_height)
         coords1 = cal_length.add_length_layer_with_shifts_note(
-            coords1, shifts, text_height
+            entities=coords1, shifts_array=shifts, text_height=text_height
         )
 
     # Call the drawing function
@@ -160,9 +162,15 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 
     # show_length
     show_length = body.show_length
+    # length font size
+    text_height = body.text_height
 
     if show_length or shifts:
-        coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
+        if shifts:
+            coords1 = markar.create_markers(coords1, shifts, text_height)
+        coords1 = cal_length.add_length_layer_with_shifts_note(
+            entities=coords1, shifts_array=shifts, text_height=text_height
+        )
 
     merged_entities = (
         merge_cor.merge_entities_with_dashed(coords1, coords2, type="dxf")

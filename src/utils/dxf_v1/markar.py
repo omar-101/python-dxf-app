@@ -89,8 +89,8 @@ def add_text_entity(x, y, aci, marker_text, width, height, shift, text_height):
 
     return {
         "entity_type": "TEXT",
-        "layer": "sink/gas",
-        "text": text,
+        "layer": "sink gas",
+        "text": text.capitalize(),
         "position": {"x": x, "y": y, "z": 0},
         "height": text_height,
         "rotation": 0,

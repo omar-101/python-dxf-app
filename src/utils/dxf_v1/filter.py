@@ -15,3 +15,8 @@ def filter_points(entities, shifts=[]):
             ent.get("entity_type") == "POINT" and ent.get("aci") not in acis_to_keep
         )
     ]
+
+
+def remove_entites(entities, shifts=[]):
+    acis_to_remove = [shift[0] for shift in shifts if shift[2] == modes.MODES["ignore"]]
+    return [ent for ent in entities if not (ent.get("aci") in acis_to_remove)]

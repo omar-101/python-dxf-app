@@ -86,12 +86,18 @@ def draw_entities(
         pos = txt.get("position", {})
         x, y = pos.get("x", 0), pos.get("y", 0)
         fontsize = txt.get("height", 12)
+        rotation = txt.get("rotation", 0)  # Get rotation in degrees (default 0)
+
         ax.text(
             x,
             y,
             txt.get("text", ""),
             color=aci_to_rgb(txt.get("aci")),
             fontsize=fontsize,
+            rotation=rotation,  # Apply rotation
+            rotation_mode="anchor",  # Ensures rotation around (x,y) position
+            ha="center",  # Horizontal alignment
+            va="center",  # Vertical alignment
         )
 
     plt.title("Entities")

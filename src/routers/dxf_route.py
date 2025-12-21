@@ -55,14 +55,15 @@ class Coordinate(BaseModel):
     vertices: list[Position] | None = None
     start: Position | None = None
     end: Position | None = None
+    rotation: float | None = None
 
 
 class Coordinates(BaseModel):
     coordinates: list[Coordinate]
     coordinates2: Optional[list[Coordinate]] = None
     shifts: Optional[list[list[int]]] = None
-    show_length: Optional[bool] = False
-    text_height: Optional[int] = 16
+    show_length: Optional[bool] = None
+    text_height: Optional[int] = None
 
 
 # -------------------------------
@@ -117,9 +118,9 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
     shifts = body.shifts
 
     # show_length
-    show_length = body.show_length
+    show_length = body.show_length or False
     # length font size
-    text_height = body.text_height
+    text_height = body.text_height or 16
 
     if show_length or shifts:
         coords1 = cal_length.add_length_layer_with_shifts_note(
@@ -161,9 +162,9 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
     shifts = body.shifts
 
     # show_length
-    show_length = body.show_length
+    show_length = body.show_length or False
     # length font size
-    text_height = body.text_height
+    text_height = body.text_height or 16
 
     if show_length or shifts:
         coords1 = cal_length.add_length_layer_with_shifts_note(
@@ -198,6 +199,7 @@ async def shift_dxf_file(body: Coordinates):
         shift_module = importlib.import_module(module_name)
         dicts = [item.model_dump() for item in body.coordinates]
         filterd_coordinates = filter.filter_points(dicts, body.shifts)
+        filterd_coordinates = filter.remove_entites(dicts, body.shifts)
         new_coordinates = shift_module.main(filterd_coordinates, body.shifts)
         return {"success": True, "coordinates": new_coordinates}
 

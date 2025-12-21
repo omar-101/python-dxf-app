@@ -122,11 +122,11 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
     text_height = body.text_height
 
     if show_length or shifts:
+        coords1 = cal_length.add_length_layer_with_shifts_note(
+            entities=coords1, shifts=shifts, text_height=text_height
+        )
         if shifts:
             coords1 = markar.create_markers(coords1, shifts, text_height)
-        coords1 = cal_length.add_length_layer_with_shifts_note(
-            entities=coords1, shifts_array=shifts, text_height=text_height
-        )
 
     # Call the drawing function
     file_path = draw.draw_entities(
@@ -166,11 +166,11 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
     text_height = body.text_height
 
     if show_length or shifts:
+        coords1 = cal_length.add_length_layer_with_shifts_note(
+            entities=coords1, shifts=shifts, text_height=text_height
+        )
         if shifts:
             coords1 = markar.create_markers(coords1, shifts, text_height)
-        coords1 = cal_length.add_length_layer_with_shifts_note(
-            entities=coords1, shifts_array=shifts, text_height=text_height
-        )
 
     merged_entities = (
         merge_cor.merge_entities_with_dashed(coords1, coords2, type="dxf")

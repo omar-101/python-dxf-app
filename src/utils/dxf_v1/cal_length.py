@@ -1,6 +1,9 @@
+from constants import modes
+
+
 def add_length_layer_with_shifts_note(
     entities,
-    shifts_array=None,
+    shifts=None,
     round_lengths=True,
     text_height=any,
 ):
@@ -8,7 +11,18 @@ def add_length_layer_with_shifts_note(
     import math
 
     new_entities = deepcopy(entities)
-    aci_to_offset = {item[0]: item[1] for item in shifts_array} if shifts_array else {}
+    aci_to_offset = {item[0]: item[1] for item in shifts} if shifts else {}
+    modes_by_value = {v: k for k, v in modes.MODES.items()}
+
+    gas_sink_shifts = (
+        {
+            aci: modes_by_value[mode]
+            for aci, shift, mode in shifts
+            if mode in (modes.MODES["sink"], modes.MODES["gas"])
+        }
+        if shifts
+        else {}
+    )
 
     for ent in entities:
         etype = ent.get("entity_type")
@@ -55,13 +69,16 @@ def add_length_layer_with_shifts_note(
         length_text = str(round(length_val)) if round_lengths else str(length_val)
         if aci in aci_to_offset:
             length_text += f"({aci_to_offset[aci]})"
-
         new_entities.append(
             {
                 "entity_type": "TEXT",
                 "text": length_text,
                 "color": 256,
-                "layer": "LENGTHS",
+                "layer": (
+                    gas_sink_shifts.get(aci, "") + "_lengths"
+                    if gas_sink_shifts.get(aci)
+                    else "LENGTHS"
+                ),
                 "aci": 0,
                 "position": {"x": mid_x, "y": mid_y, "z": 0.0},
                 "height": text_height,

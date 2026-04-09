@@ -39,6 +39,12 @@ class Position(BaseModel):
     z: float
 
 
+class Point(BaseModel):
+    x: float
+    y: float
+    z: float
+
+
 class Coordinate(BaseModel):
     entity_type: str | None = None
     layer: str | None = None
@@ -56,6 +62,8 @@ class Coordinate(BaseModel):
     start: Position | None = None
     end: Position | None = None
     rotation: float | None = None
+    center: Point | None = None
+    radius: float | None = None
 
 
 class Coordinates(BaseModel):

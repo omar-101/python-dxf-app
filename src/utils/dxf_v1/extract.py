@@ -80,6 +80,17 @@ def extract_entities(dxf_path):
                 }
             )
 
+        if entity.dxftype() == "CIRCLE":
+            center = entity.dxf.center  # Returns Vec3(x, y, z)
+            radius = entity.dxf.radius
+            e.update(
+                {
+                    "entity_type": "CIRCLE",
+                    "center": {"x": center.x, "y": center.y, "z": center.z},
+                    "radius": radius,
+                }
+            )
+
         # LWPOLYLINE
         elif entity.dxftype() == "LWPOLYLINE":
             verts = []

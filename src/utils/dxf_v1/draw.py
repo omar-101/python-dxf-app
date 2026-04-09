@@ -81,6 +81,12 @@ def draw_entities(
                 linewidth=1.2,
             )
 
+    # circle
+    for cir in grouped.get("CIRCLE", []):
+        center = cir.get("center")
+        circle = plt.Circle((center["x"], center["y"]), cir.get("radius"), fill=False)
+        ax.add_patch(circle)
+
     # ---- TEXT ----
     for txt in grouped.get("TEXT", []):
         pos = txt.get("position", {})

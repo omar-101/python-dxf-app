@@ -3,6 +3,7 @@ import ezdxf
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from utils import unique
+from services import s3
 
 
 def aci_to_rgb(aci_color):
@@ -23,7 +24,7 @@ def draw_entities(
     entities,
     width=20,
     height=16,
-    dpi=200,
+    dpi=72,
     file_path=None,
 ):
     os.makedirs("./tmp", exist_ok=True)
@@ -89,8 +90,7 @@ def draw_entities(
 
     # ---- TEXT ----
     for txt in grouped.get("TEXT", []):
-        pos = txt.get("position", {})
-        x, y = pos.get("x", 0), pos.get("y", 0)
+        x, y = txt.get("x", 0), txt.get("y", 0)
         fontsize = txt.get("height", 12)
         rotation = txt.get("rotation", 0)  # Get rotation in degrees (default 0)
 
@@ -106,9 +106,36 @@ def draw_entities(
             va="center",  # Vertical alignment
         )
 
+    # ---- MTEXT ----
+    for txt in grouped.get("MTEXT", []):
+        x, y = txt.get("x", 0), txt.get("y", 0)
+
+        fontsize = txt.get("height", 12)
+        rotation = txt.get("rotation", 0)
+
+        text_value = txt.get("text", "")
+
+        # DXF MTEXT line breaks
+        text_value = text_value.replace("\\P", "\n")
+
+        ax.text(
+            x,
+            y,
+            text_value,
+            color=aci_to_rgb(txt.get("aci")),
+            fontsize=fontsize,
+            rotation=rotation,
+            rotation_mode="anchor",
+            ha="left",  # MTEXT is usually left-aligned in CAD
+            va="center",
+        )
+
     plt.title("Entities")
     plt.xlabel("X axis")
     plt.ylabel("Y axis")
     plt.savefig(file_path, dpi=dpi, bbox_inches="tight")
     plt.close()
-    return file_path
+
+    image_path = s3.upload_file(file_path)
+
+    return image_path, file_path

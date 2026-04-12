@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, HTTPException, BackgroundTasks, Form, File
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -86,7 +86,7 @@ def remove_file(path: str):
 # /extract endpoint
 # -------------------------------
 @router.post("/extract")
-async def read_dxf_file(file: UploadFile):
+async def read_dxf_file(file: UploadFile = File(...), keep_text: bool = Form(False)):
     os.makedirs("./tmp", exist_ok=True)
     file_path = f"./tmp/{unique.unique_string(20)}.dxf"
 
@@ -94,7 +94,7 @@ async def read_dxf_file(file: UploadFile):
         with open(file_path, "wb") as f:
             f.write(await file.read())
 
-        coordinates = extract.extract_entities(file_path)
+        coordinates = extract.extract_entities(file_path, keep_text)
         return {"success": True, "coordinates": coordinates}
 
     except ValueError as e:
@@ -138,7 +138,7 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
             coords1 = markar.create_markers(coords1, shifts, text_height)
 
     # Call the drawing function
-    file_path = draw.draw_entities(
+    image_path, file_path = draw.draw_entities(
         entities=(
             merge_cor.merge_entities_with_dashed(coords1, coords2, type="draw")
             if coords2
@@ -146,11 +146,8 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
         )
     )
 
-    # Schedule file deletion after response
     background_tasks.add_task(remove_file, file_path)
-
-    # Return file directly
-    return FileResponse(file_path)
+    return {"success": True, "image_path": image_path}
 
 
 # -------------------------------

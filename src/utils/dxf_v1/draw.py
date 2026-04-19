@@ -90,7 +90,8 @@ def draw_entities(
 
     # ---- TEXT ----
     for txt in grouped.get("TEXT", []):
-        x, y = txt.get("x", 0), txt.get("y", 0)
+        pos = txt.get("position", {})
+        x, y = pos.get("x", 0), pos.get("y", 0)
         fontsize = txt.get("height", 12)
         rotation = txt.get("rotation", 0)  # Get rotation in degrees (default 0)
 

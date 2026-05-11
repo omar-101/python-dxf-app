@@ -27,4 +27,8 @@ jobs:
         run: docker build -t dxf-app .
       - name: Run Docker container
         run: |
-          docker run -d --name dxf-app -p 80:80 dxf-app
+          docker run -d \
+          --name dxf-app \
+          -p 80:80 \
+          --restart unless-stopped \
+          dxf-app

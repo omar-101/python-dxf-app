@@ -1,0 +1,630 @@
+
+
+import sys
+import json
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+from typing import List
+
+from scripts.shift_script_v7.point import Point
+from scripts.shift_script_v7.shape import Shape
+from scripts.shift_script_v7.config import (
+    colors_categories_dict, 
+    aci_color_code_dict, 
+    aci_color_code_inverse_dict, 
+    categories_to_code_dict, 
+    smartscale_3d
+)
+from scripts.shift_script_v7.designs import Designs
+
+X = 0 ; Y = 1
+valide_entity_types = ["LWPOLYLINE", "POINT", "LINE", "CIRCLE"]
+
+### added in v6 to ignore sink, gas and electric as well as regular ignores
+ignore_codes = [3,6,7,8] # "ignore", "sink", "gas", "electric_sq"
+design_categories = {
+    "sync" : Designs.Kitchen_Sync,
+    "gas"  : Designs.Kitchen_Gas,
+    "electric"  : None,
+}
+design_parts = []
+###
+
+electric_objs = [] # v7
+circles_objs = [] # v7
+
+colors_shift_dict = {
+    "purple"   : 0,
+    "darkgray" : 0,
+    "orange"   : 0,
+    "green"    : 0,
+    "red"      : 0,
+    "blue"     : 0,
+    "gray"     : 0,
+    "yellow"   : 0,
+}
+
+outline_colors    = []
+inside_colors     = []
+ignore_colors     = []
+remove_colors     = []
+keep_point_colors = []
+circles_colors    = []
+electric_colors   = []
+
+############################################################################################################################################
+####################################################### Utilities ##########################################################################
+############################################################################################################################################
+
+def _print_logo():
+    for line in smartscale_3d:
+        print(line)
+    return
+
+def _print_banner(text):
+    text = " " + text + " "
+    min_len = 111
+    min_side = 5
+    N = len(text)
+
+    side = int(max(min_side, (min_len-N)/2))
+    print("")
+    print("#" * int(2*side+N))
+    print("#"*side + text + "#"*side)
+    print("#" * int(2*side+N))
+    return
+
+############################################################################################################################################
+##################################################### Data Parsing #########################################################################
+############################################################################################################################################
+
+# divides the colors into 7 lists according to the categories code from shifts
+# and fills colors_shift_dict with the shift amount for each color
+def _parse_colors_list(shifts):
+    # _print_banner("Colors & Shitfs")
+    categories = ["outline", "inside", "ignore", "remove", "keep_point", "circles", "electric"]
+    lists = [outline_colors, inside_colors, ignore_colors, remove_colors, keep_point_colors, circles_colors, electric_colors]
+
+    for line in shifts:
+        color, shitf, code = line
+        # print(f"code={code}")
+        colors_shift_dict[aci_color_code_dict[color]] = shitf
+        ### added in v6 to support sink, gas and electric ignore
+        list_type = 2 if code in ignore_codes else code-1
+        ###
+        ### added in v7 to support circles and electric
+        if code == categories_to_code_dict["electric_cr"]:
+            list_type = 5 # add to circles_colors list
+        elif code == categories_to_code_dict["electric_sq"]:
+            list_type = 6 # add to electric_colors list
+        ###
+        lists[list_type].append(color)
+
+    for i in range(len(lists)):
+        # print(f"\n{categories[i]} colors list:")
+        for color in lists[i]:
+            shitf = colors_shift_dict[aci_color_code_dict[color]]
+            # if isinstance(shitf, str): # v7 - electric
+            #     # print(f"{aci_color_code_dict[color]} ({shitf})")
+            # else:
+            #     # print(f"{aci_color_code_dict[color]} ({('+' if shitf > 0 else '') + str(shitf)})")
+
+    return
+
+def _parse_line(line):
+    if line["entity_type"] == "LWPOLYLINE":
+        vertices = line["vertices"]
+    elif line["entity_type"] == "POINT":
+        vertices = [line]
+    elif line["entity_type"] == "LINE":
+        vertices = [line["start"], line["end"]]
+    else:
+        vertices = []
+    return vertices
+
+def parse_data(data, to_print=False):
+    _print_banner("Parse Data")
+    outline_points = []
+    inside_points = []
+    ignore_points = []
+    counter = 0
+    design_counter = 0 # to keep track of sync, gas, electric...
+    # if "coordinates" in data:
+    for line in data:
+        if "entity_type" in line and "layer" in line and "aci" in line:
+            if line["entity_type"].upper() in valide_entity_types and line["layer"] != "Frames":
+                
+                ### added in v5 to only keep points that in color code "keep_point" category
+                if (line["entity_type"] == "POINT") and (line["aci"] not in keep_point_colors):
+                    continue
+                ###
+
+                ### added in v7 to support circles
+                if line["entity_type"] == "CIRCLE":
+                    if line["aci"] in circles_colors:
+                        if "center" in line and "radius" in line:
+                            # the circle is valide and need change
+                            # if to_print:
+                            #     print("circle detected!f")
+                            circle = create_circlex_object(line)
+                            circles_objs.append(circle)
+
+                    # skip points parsing for circle entity
+                    continue
+                ###
+
+                for design_category in design_categories.keys():
+                    if design_category in line["layer"]:
+                        design_parts.append((design_counter, design_category))
+
+                vertices = _parse_line(line)
+                # if to_print:
+                    # print("###############################################################################################")
+                    # print(line["entity_type"])
+                    # print(vertices)
+
+                to_incease_counter = True if line["aci"] in outline_colors or line["aci"] in inside_colors else False
+
+                points = []
+                for point in vertices:
+                    # if to_print:
+                    #     print(point)
+
+                    if "x" in point and "y" in point:
+                        # points.append(Point(round(point["x"]), round(point["y"]), info=[counter], color=line["aci"])) # v6R - ignore
+                        points.append(Point(point["x"], point["y"], info=[counter], color=line["aci"])) # v6
+                        # if to_print:
+                        #     print(f"created {points[-1]}")
+                        if to_incease_counter:
+                            counter += 1
+
+                if line["aci"] in outline_colors:
+                    outline_points.append(points)
+                elif line["aci"] in inside_colors:
+                    inside_points.append(points)
+                elif line["aci"] in ignore_colors:
+                    ignore_points.append(points)
+                    design_counter += 1
+                ### added in v5 to only keep points that in color code "keep_point" category
+                elif line["aci"] in keep_point_colors and line["entity_type"] == "POINT":
+                    outline_points.append(points)
+                ###
+                ### added in v7 to support electric
+                elif line["aci"] in electric_colors:
+                    electric_aci = line["aci"]
+                    electric = Designs.Electric(points, aci_color_code_dict[electric_aci])
+                    electric_objs.append(electric)
+                ###
+
+
+    # all_points = [("outline_points", outline_points), ("inside_points", inside_points), ("ignore_points", ignore_points)]
+    # for points in all_points:
+    #     print(f"\n++++++++++ {points[0]} ++++++++++")
+    #     for i, points_group in enumerate(points[1]):
+    #         print(f"group {i+1}:")
+    #         for point in points_group:
+    #             print(point)
+
+    return outline_points, inside_points, ignore_points
+
+def parse_simple_data(data):
+    all_points = []
+    for point in data:
+        all_points.append(Point(point["X"], point["Y"], info=[""], color=12))
+    
+    s = Shape(all_points)
+    s.show()
+    return all_points, []
+
+def view(points, draw_edges=True):
+    n = len(points)
+    all_points = []
+    for group in points:
+        all_points += group
+
+    for i, point in enumerate(all_points):
+        c = aci_color_code_dict[point._color_code]
+        plt.plot(point.x, point.y, 'o', c=c, zorder=100)
+        plt.text(point.x+5, point.y, str(i%n), fontsize=12, ha='left', va='bottom', color=c)
+
+        if draw_edges:
+            # to draw the edge
+            next_point = all_points[(i+1) % n]
+            plt.plot((point.x, next_point.x), (point.y, next_point.y), c=aci_color_code_dict[next_point._color_code], zorder=99)
+
+    plt.show()
+    return
+
+def create_circlex_object(line): # v7
+    circle_x = line["center"]["x"]
+    circle_y = line["center"]["y"]
+    circle_r = line["radius"]
+    circle_aci = line["aci"]
+    circle_color = aci_color_code_dict[circle_aci]
+    return Designs.Circle([circle_x,circle_y], circle_r, circle_color)
+
+def _create_electric_shapes_to_show(): # v7
+    electric_shapes = []
+    for electric in electric_objs:
+        electric_shapes.append((electric.updated_points, electric.color))
+    return electric_shapes
+
+############################################################################################################################################
+###################################################### Smartscale ##########################################################################
+############################################################################################################################################
+
+def draw_shapes(shapes, designs, circles=[], title="shapes", to_export=False):
+    shapes += _create_electric_shapes_to_show() # v7
+    fig, ax = plt.subplots()
+    for shape in shapes:
+        points, color = shape
+        n = len(points)
+        for i in range(n):
+            point = points[i]
+            c = aci_color_code_dict[point._color_code] if color is None else color
+            plt.plot(point.x, point.y, 'o', c=c, zorder=100)
+            if color is None:
+                plt.text(point.x+5, point.y, str((i+1)%n), fontsize=12, ha='left', va='bottom', color=c)
+
+            # to draw the edge
+            next_point = points[(i+1) % n]
+            c = aci_color_code_dict[next_point._color_code] if color is None else color
+            linestyle = "-" if color is None else "--"
+            linewidth = 1 if color is None else 1
+            alpha = 1 if color is None else 1
+            plt.plot((point.x, next_point.x), (point.y, next_point.y), linestyle=linestyle, linewidth=linewidth, alpha=alpha, c=c, zorder=99)
+
+    for design in designs:
+        ax.add_patch(design)
+    
+    for circle in circles:
+        x, y = circle.get_center()
+        color = circle.get_color()
+        plt.plot(x, y, 'o', c=color, zorder=100)
+        circle_patch = plt.Circle((x, y), circle.get_radius(), edgecolor=color, fill=False)
+        ax.add_patch(circle_patch)
+
+    if to_export:
+        plt.savefig(f"{title}.png")
+    else:
+        plt.show()
+    return
+
+def _extract_piece_points(source, index, destination, to_reverse):
+    if source and source[index]:
+        piece = source.pop(index)
+        if to_reverse:
+            piece.reverse()
+
+        # merge the two similar points' info
+        if destination:
+            common_point = piece.pop(0)
+            destination[-1]._info += common_point._info
+        
+        # copy all remaining points in order
+        for point in piece:
+            destination.append(point)
+    return
+
+def match_points(all_points):
+    if not all_points:
+        return []
+    _print_banner("Match Points")
+    # print(all_points)
+    result = []
+    _extract_piece_points(source=all_points, index=0, destination=result, to_reverse=False)
+    # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    # print(result)
+
+    had_match = True
+    while all_points and had_match:
+        last_point = result[-1] # search for new match with the last point of last matched piece
+        had_match = False # to ensure ach point find a match in each iteration
+        for i, piece in enumerate(all_points):
+            if piece[0] == last_point:
+                _extract_piece_points(source=all_points, index=i, destination=result, to_reverse=False)
+                had_match = True
+            elif piece[-1] == last_point:
+                _extract_piece_points(source=all_points, index=i, destination=result, to_reverse=True)
+                had_match = True
+    
+    if len(all_points) != 0 or result[0] != result[-1]:
+        # print("Error: not a closed shape")
+        raise RuntimeError("Error: not a closed shape")
+    
+    last_point = result.pop(-1)
+    result[0]._info += last_point._info
+    result[0]._color_code = last_point._color_code
+    return result
+
+def _get_intersection_point(line1: tuple[Point, Point], line2: tuple[Point, Point]):
+    p1, p2 = line1
+    p3, p4 = line2
+
+    denom = (p1.x-p2.x)*(p3.y-p4.y) - (p1.y-p2.y)*(p3.x-p4.x)
+    if denom == 0:
+        # print("parallel lines")
+        return None
+
+    px = ((p1.x*p2.y - p1.y*p2.x)*(p3.x-p4.x) - (p1.x-p2.x)*(p3.x*p4.y - p3.y*p4.x)) / denom
+    py = ((p1.x*p2.y - p1.y*p2.x)*(p3.y-p4.y) - (p1.y-p2.y)*(p3.x*p4.y - p3.y*p4.x)) / denom
+    return (px, py)
+
+def _create_new_shape(shape, index, new_point1, new_point2):
+    n = shape.n
+    i1 = index
+    i2 = (index+1) % n
+
+    # get the original points' info
+    new_point1._info = shape.points[i1]._info
+    new_point2._info = shape.points[i2]._info
+
+    new_point1._color_code = shape.points[i1]._color_code
+    new_point2._color_code = shape.points[i2]._color_code
+
+    # create a new shape with the new points
+    new_shape = shape.mcopy()
+    new_shape.change_point(index=i1, new_point=new_point1)
+    new_shape.change_point(index=i2, new_point=new_point2)
+    return new_shape
+
+def move_edge(shape, p1_index, p2_index, delta):
+    points = shape.points
+    abs_delta = abs(delta)
+    n = shape.n
+
+    p1 = points[p1_index % n]
+    p2 = points[p2_index % n]
+
+    dx, dy = p2.x - p1.x, p2.y - p1.y
+    length = math.hypot(dx, dy)
+    if length == 0:
+        raise ValueError("not an edge")
+
+    # positive shape option
+    positive_normal = Point(-dy/length, dx/length)
+    p1_pos = p1 + positive_normal*abs_delta
+    p2_pos = p2 + positive_normal*abs_delta
+    positive_shape = _create_new_shape(shape=shape, index=p1_index, new_point1=p1_pos, new_point2=p2_pos)
+
+    # negative shape option
+    negative_normal = Point(dy/length, -dx/length)
+    p1_neg = p1 + negative_normal*abs_delta
+    p2_neg = p2 + negative_normal*abs_delta
+    negative_shape = _create_new_shape(shape=shape, index=p1_index, new_point1=p1_neg, new_point2=p2_neg)
+
+    if delta >= 0:
+        return (p1_pos, p2_pos) if positive_shape.area > negative_shape.area else (p1_neg, p2_neg)
+    else:
+        return (p1_pos, p2_pos) if positive_shape.area < negative_shape.area else (p1_neg, p2_neg)
+
+def applay_edges_movements(shape, colors_shift_dict):
+    edges_after_moving = []
+    for i in range(shape.n):
+        # edge color is the secound point's color
+        j = (i+1) % shape.n
+        color_code = shape.points[j]._color_code
+        color = aci_color_code_dict[color_code]
+
+        # get the edge's shift according to it's color
+        shift = colors_shift_dict[color]
+
+        if shift != 0:
+            # applay the shift on the edge
+            # print(f"moving {color} Edge({i},{i+1}) by {shift}")
+            new_edge = move_edge(shape, i, (i+1), shift)
+            edges_after_moving.append(new_edge)
+        else:
+            # save the edge without change
+            edges_after_moving.append((shape.points[i], shape.points[j]))
+    
+    # print("\nedges_after_moving:")
+    for e in range(len(edges_after_moving)):
+        print(f"Edge {e} : {edges_after_moving[e]}")
+
+    return edges_after_moving
+
+def connect_edges(edges):
+    n = len(edges)
+    points = []
+    # print("\nconnecting the new edges:")
+    for i in range(n):
+        j = (i+1) % n
+        intersection_point = _get_intersection_point(edges[i], edges[j])
+        # print(f"intersection_point {i},{j} : {intersection_point}")
+        point = Point(intersection_point[X], intersection_point[Y])
+        points.append(point)
+
+    return Shape(points)
+
+def smartscale(shape, shifts):
+    _print_banner("Moving Edges")
+    edges = applay_edges_movements(shape, shifts)
+    new_shape = connect_edges(edges)
+
+    # copy the original Shape's info into the new Shape
+    for i in range(shape.n):
+        j = (i-1) % shape.n
+        new_shape.points[j]._info = shape.points[i]._info
+        new_shape.points[j]._color_code = shape.points[i]._color_code
+
+    return new_shape
+
+############################################################################################################################################
+###################################################### Write Back ##########################################################################
+############################################################################################################################################
+
+def update_circles(circles_list): # v7
+    # print(f"\nupdating {len(circles_list)} circle" + "s" if len(circles_list) != 1 else "")
+
+    for circle in circles_list:
+        new_radius = colors_shift_dict[circle.get_color()]
+        circle.set_radius(new_radius)
+    return
+
+def update_electric(electric_list): # v7
+    # print(f"\nupdating {len(electric_list)} electric" + "s" if len(electric_list) != 1 else "")
+
+    for electric in electric_list:
+        measures_str = colors_shift_dict[electric.get_color()]
+        electric.calculate_points(measures_str)
+    return
+
+def _create_data_sequence(points):
+    max_index = 0
+    for point in points:
+        max_index = max(max(point._info), max_index)
+    
+    sequence = [0 for _ in range(max_index+1)]
+    for point in points:
+        for index in point._info:
+            sequence[index] = (point.x, point.y)
+    
+    return sequence
+
+def _update_data(data, sequence):
+    _print_banner("Write Back The Updated Data")
+    counter = 0
+    circles_counter = 0
+    electric_counter = 0
+
+    # if "coordinates" in data:
+    for line in data:
+        if "entity_type" in line and "layer" in line and "aci" in line:
+            if line["entity_type"].upper() in valide_entity_types and line["layer"] != "Frames":
+
+                ### added in v5 to only keep points that in color code "keep_point" category
+                if (line["entity_type"] == "POINT") and (line["aci"] not in keep_point_colors):
+                    continue
+                ###
+
+                ### added in v7 to support circles
+                if line["entity_type"] == "CIRCLE":
+                    if line["aci"] in circles_colors:
+                        if "center" in line and "radius" in line:
+                            # the circle is valide and need update
+                            if circles_counter >= len(circles_objs):
+                                # print("Error: missing circles to write back")
+                                raise RuntimeError("Error: missing circles to write back")
+                            else:
+                                line["radius"] = circles_objs[circles_counter].get_radius()
+                                circles_counter += 1
+
+                    # skip points updating for circle entity
+                    continue
+                ###
+
+                vertices = _parse_line(line)
+
+                ### added in v7 to support electric
+                if line["aci"] in electric_colors:
+                    if len(vertices) != 4:
+                        # print("Error: incorrect electric entity")
+                        raise RuntimeError("Error: incorrect electric entity")
+                    for point in vertices:
+                        if not ("x" in point and "y" in point):
+                            # print("Error: incorrect electric point")
+                            raise RuntimeError("Error: incorrect electric point")
+                    if electric_counter >= len(electric_objs):
+                        # print("Error: missing electric to write back")
+                        raise RuntimeError("Error: missing electric to write back")
+
+                    
+                    updated_electric_points = electric_objs[electric_counter].updated_points
+                    for i, point in enumerate(vertices):
+                        point["x"] = updated_electric_points[i].x
+                        point["y"] = updated_electric_points[i].y
+
+                    # skip points updating for electric entity
+                    electric_counter += 1
+                    continue
+                ###
+
+                for point in vertices:
+                    if "x" in point and "y" in point and (line["aci"] in outline_colors or line["aci"] in inside_colors):
+                        if counter < len(sequence):
+                            point["x"] = sequence[counter][X]
+                            point["y"] = sequence[counter][Y]
+                            counter += 1
+                        else:
+                            # print("Error: too many points to write back")
+                            raise RuntimeError("Error: too many points to write back")
+    # print("\n" + "All Points Updated Successfully!" if counter == len(sequence) else "Error: did not write all points back")
+    return data
+
+### use in case of outlines only ###
+def write_back(path, shape):
+    # read data from json file
+    with open(path, "r") as f:
+        data = json.load(f)
+
+    # update the data according to the given shape
+    sequence = _create_data_sequence(shape.points)
+    _update_data(data, sequence)
+
+    # write the new data back to the json file
+    new_path = path.split(".json")
+    name = new_path[0] + "_output.json"
+    with open(name, "w") as f:
+        json.dump(data, f, indent=2)
+    return
+
+
+############################################################################################################################################
+######################################################### MAIN #############################################################################
+############################################################################################################################################
+
+def main(data, shifts):
+    _print_logo()
+
+    # save the info in colors_shift_dict and the 4 color categories lists
+    _parse_colors_list(shifts)
+
+    # split the points from the data by color category
+    outline_points, inside_points, ignore_points = parse_data(data)
+
+    # to view json without any operaions
+    # view(outline_points, draw_edges=False)
+
+    # create the outline shape
+    points = match_points(outline_points)
+    shape = Shape(points)
+    shape.show()
+    
+    # create the inner shape (if exists)
+    # print(f"\ninside_shape {inside_points}")
+    inside_shape = None
+    if inside_points:
+        inside_shape = Shape(inside_points[0])
+        # print(f"inside_shape {inside_shape.points}")
+        inside_shape.show()
+
+    # applay the shifts on the outline shape
+    new_shape = smartscale(shape, colors_shift_dict)
+    
+    # create the sync, gas and electric designs
+    all_designs = []
+    for design_part in design_parts:
+        index, design_type = design_part
+        design_obj = design_categories[design_type](ignore_points[index])
+        all_designs += design_obj.designs
+
+    # v7 - update circles and electric objects before drawing and updating the json data file
+    # print("electric_objs")
+    # print(electric_objs)
+    update_circles(circles_objs)
+    update_electric(electric_objs)
+
+    # draw the outlines, inner points and extras
+    extras = [(e, None) for e in ignore_points]
+    inside_shape_points = inside_shape.points if inside_shape else []
+    draw_shapes([(shape.points, "black"), (new_shape.points, None), (inside_shape_points, None)] + extras, all_designs, circles_objs, "test_100")
+    
+    # update the original json data file
+    sequence = _create_data_sequence(new_shape.points + inside_shape_points)
+    updated_data = _update_data(data, sequence)
+    cleaned = [{k: v for k, v in obj.items() if v is not None} for obj in updated_data]
+    return cleaned
+
+

@@ -69,7 +69,7 @@ class Coordinate(BaseModel):
 class Coordinates(BaseModel):
     coordinates: list[Coordinate]
     coordinates2: Optional[list[Coordinate]] = None
-    shifts: Optional[list[list[int]]] = None
+    shifts: Optional[list[list[int | str]]] = None
     show_length: Optional[bool] = None
     text_height: Optional[int] = None
 
@@ -196,7 +196,7 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 # -------------------------------
 @router.post("/shift")
 async def shift_dxf_file(body: Coordinates):
-    module_name = "scripts.shift_script_v6.shift"
+    module_name = "scripts.shift_script_v7.shift"
     try:
         if module_name in sys.modules:
             del sys.modules[module_name]

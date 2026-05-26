@@ -37,8 +37,7 @@ def extract_entities(dxf_path, keep_text):
             }
             e.update(
                 {
-                    "x": entity.dxf.insert.x,
-                    "y": entity.dxf.insert.y,
+                    "position": {"x": entity.dxf.insert.x, "y":entity.dxf.insert.y },
                     "text": (
                         entity.dxf.text
                         if entity.dxftype() == "TEXT"

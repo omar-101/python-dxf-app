@@ -36,7 +36,7 @@ class Triple(BaseModel):
 class Position(BaseModel):
     x: float
     y: float
-    z: float
+    z: float | None = None
 
 
 class Point(BaseModel):

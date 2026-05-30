@@ -42,7 +42,7 @@ def draw_entities(
     # ---- POINT ----
     for pt in grouped.get("POINT", []):
         ax.scatter(
-            pt.get("x", 0), pt.get("y", 0), color=aci_to_rgb(pt.get("aci")), s=30
+            pt.get("x", 0), pt.get("y", 0), color=aci_to_rgb(pt.get("secondary_aci") or pt.get("aci")), s=30
         )
 
     # ---- LINE ----
@@ -56,7 +56,7 @@ def draw_entities(
         ax.plot(
             [start["x"], end["x"]],
             [start["y"], end["y"]],
-            color="black" if is_dashed else aci_to_rgb(ln.get("aci")),
+            color="black" if is_dashed else aci_to_rgb(ln.get("secondary_aci") or ln.get("aci")),
             linestyle="--" if is_dashed else "-",
             linewidth=1.2,
         )
@@ -77,7 +77,7 @@ def draw_entities(
             ax.plot(
                 [x1, x2],
                 [y1, y2],
-                color="black" if is_dashed else aci_to_rgb(poly.get("aci")),
+                color="black" if is_dashed else aci_to_rgb(poly.get("secondary_aci") or poly.get("aci")),
                 linestyle="--" if is_dashed else "-",
                 linewidth=1.2,
             )
@@ -99,7 +99,7 @@ def draw_entities(
             x,
             y,
             txt.get("text", ""),
-            color=aci_to_rgb(txt.get("aci")),
+            color=aci_to_rgb(txt.get("secondary_aci") or txt.get("aci")),
             fontsize=fontsize,
             rotation=rotation,  # Apply rotation
             rotation_mode="anchor",  # Ensures rotation around (x,y) position
@@ -123,7 +123,7 @@ def draw_entities(
             x,
             y,
             text_value,
-            color=aci_to_rgb(txt.get("aci")),
+            color=aci_to_rgb(txt.get("secondary_aci") or txt.get("aci")),
             fontsize=fontsize,
             rotation=rotation,
             rotation_mode="anchor",

@@ -50,6 +50,7 @@ class Coordinate(BaseModel):
     layer: str | None = None
     color: int | None = None
     aci: int | None = None
+    secondary_aci: int | None = None
     x: float | None = None
     y: float | None = None
     z: float | None = None

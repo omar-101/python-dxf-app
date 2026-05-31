@@ -84,8 +84,12 @@ def draw_entities(
 
     # circle
     for cir in grouped.get("CIRCLE", []):
+        is_dashed = cir.get("dashed", False)
         center = cir.get("center")
-        circle = plt.Circle((center["x"], center["y"]), cir.get("radius"), fill=False)
+        circle = plt.Circle((center["x"], center["y"]), cir.get("radius"), fill=False, 
+                color="black" if is_dashed else aci_to_rgb(cir.get("secondary_aci") or cir.get("aci")),
+                linestyle="--" if is_dashed else "-",
+                linewidth=1.2,)
         ax.add_patch(circle)
 
     # ---- TEXT ----

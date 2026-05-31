@@ -26,8 +26,7 @@ def extract_entities(dxf_path, keep_text):
             else None
         )
 
-        # if entity.dxftype() in {"TEXT", "MTEXT"}:
-        #     continue
+    
         if keep_text and entity.dxftype() in {"TEXT", "MTEXT"}:
             e = {
                 "entity_type": entity.dxftype(),

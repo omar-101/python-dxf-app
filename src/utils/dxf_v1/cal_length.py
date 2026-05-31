@@ -74,6 +74,20 @@ def add_length_layer_with_shifts_note(
                     angle = math.degrees(math.atan2(dy, dx))
                     break
                 cum += seg
+
+        elif etype == "CIRCLE":
+            center = ent["center"]
+            radius = ent["radius"]
+
+            mid_x = center["x"]
+            mid_y = center["y"]
+
+            dx = dy = 0.0
+            angle = 0.0
+
+            # ONLY radius value (44), not diameter
+            length_val = radius
+
         else:
             continue
 
@@ -99,13 +113,13 @@ def add_length_layer_with_shifts_note(
 
         # Round length
         length_text = str(round(length_val)) if round_lengths else str(length_val)
-        if aci in aci_to_offset:
+        if aci in aci_to_offset and etype != "CIRCLE":
             length_text += f"({aci_to_offset[aci]})"
 
         new_entities.append(
             {
                 "entity_type": "TEXT",
-                "text": length_text,
+                "text": f"R({length_text})" if etype == "CIRCLE" else  length_text,
                 "color": 256,
                 "layer": (
                     gas_sink_shifts.get(aci, "") + "_lengths"

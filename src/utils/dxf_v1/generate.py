@@ -29,7 +29,7 @@ def generate_dxf(entities: list[dict], file_path=None):
     for ent in entities:
         etype = ent.get("entity_type")
         layer = ent.get("layer", "0")
-        aci = ent.get("aci", 7)  # default color if missing
+        aci = ent.get("secondary_aci", "aci", 7)  # default color if missing
 
         # Create layer if needed
         if layer not in existing_layers:

@@ -72,6 +72,7 @@ class Coordinates(BaseModel):
     coordinates2: Optional[list[Coordinate]] = None
     shifts: Optional[list[list[int | str]]] = None
     show_length: Optional[bool] = None
+    show_length_acis: Optional[list[int]] = None
     text_height: Optional[int] = None
 
 
@@ -128,15 +129,16 @@ async def draw_dxf_file(body: Coordinates, background_tasks: BackgroundTasks):
 
     # show_length
     show_length = body.show_length or False
+    show_length_acis = body.show_length_acis
     # length font size
     text_height = body.text_height or 16
 
     if show_length or shifts:
         coords1 = cal_length.add_length_layer_with_shifts_note(
-            entities=coords1, shifts=shifts, text_height=text_height
+            entities=coords1, shifts=shifts, text_height=text_height, show_length_acis=show_length_acis
         )
         if shifts:
-            coords1 = markar.create_markers(coords1, shifts, text_height)
+            coords1 = markar.create_markers(coords1, shifts, text_height, show_length_acis)
 
     # Call the drawing function
     image_path, file_path = draw.draw_entities(
@@ -169,15 +171,16 @@ async def generate_dxf_file(body: Coordinates, background_tasks: BackgroundTasks
 
     # show_length
     show_length = body.show_length or False
+    show_length_acis = body.show_length_acis
     # length font size
     text_height = body.text_height or 16
 
     if show_length or shifts:
         coords1 = cal_length.add_length_layer_with_shifts_note(
-            entities=coords1, shifts=shifts, text_height=text_height
+            entities=coords1, shifts=shifts, text_height=text_height, show_length_acis=show_length_acis
         )
         if shifts:
-            coords1 = markar.create_markers(coords1, shifts, text_height)
+            coords1 = markar.create_markers(coords1, shifts, text_height, show_length_acis)
 
     merged_entities = (
         merge_cor.merge_entities_with_dashed(coords1, coords2, type="dxf")
@@ -235,9 +238,10 @@ async def convert_to_dwg(body: Coordinates, background_tasks: BackgroundTasks):
     coords2 = [c.model_dump() for c in body.coordinates2] if body.coordinates2 else None
     shifts = body.shifts
     show_length = body.show_length
+    show_length_acis = body.show_length_acis
 
     if show_length or shifts:
-        coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts)
+        coords1 = cal_length.add_length_layer_with_shifts_note(coords1, shifts, show_length_acis=show_length_acis)
 
     # -------------------------------
     # 1) Generate DXF

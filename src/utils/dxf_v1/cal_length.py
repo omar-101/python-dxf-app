@@ -7,6 +7,7 @@ def add_length_layer_with_shifts_note(
     round_lengths=True,
     text_height=None,  # text height (numeric)
     offset_margin=20,  # extra distance to move text off the line
+    show_length_acis=None,  # list of ACI values to show lengths for (None = all)
 ):
     from copy import deepcopy
     import math
@@ -25,12 +26,19 @@ def add_length_layer_with_shifts_note(
         else {}
     )
 
+    # Build set of ACIs to show lengths for
+    acis_set = set(show_length_acis) if show_length_acis is not None else None
+
     # Offset distance based on text height + margin
     offset_distance = text_height / 2 + offset_margin
 
     for ent in entities:
         etype = ent.get("entity_type")
         aci = ent.get("aci", 0)
+        effective_aci = ent.get("secondary_aci") or aci
+
+        if acis_set is not None and effective_aci not in acis_set:
+            continue
 
         # Initialize angle
         angle = 0.0

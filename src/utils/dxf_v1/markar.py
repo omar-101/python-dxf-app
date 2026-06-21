@@ -172,11 +172,12 @@ def gas_sink_marker(
 # ------------------ Apply markers ------------------
 
 
-def create_markers(coords, shifts, text_height):
+def create_markers(coords, shifts, text_height, show_length_acis=None):
     """
     Adds gas/sink markers based on shifts.
     """
     modes_by_value = {v: k for k, v in modes.MODES.items()}
+    acis_set = set(show_length_acis) if show_length_acis is not None else None
 
     # Filter only gas/sink modes
     gas_sink_shifts = [
@@ -185,8 +186,10 @@ def create_markers(coords, shifts, text_height):
         if mode in (modes.MODES["sink"], modes.MODES["gas"])
     ]
 
-    # Apply markers
+    # Apply markers (skip if ACI not in show_length_acis)
     for item in gas_sink_shifts:
+        if acis_set is not None and item["aci"] not in acis_set:
+            continue
         coords = gas_sink_marker(
             coords, item["aci"], item["mode_text"], item["shift"], text_height
         )
